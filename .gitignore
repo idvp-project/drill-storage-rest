@@ -1,0 +1,11 @@
+########### total ###########
+
+# idea
+.idea
+*.iml
+
+# maven
+target
+.project
+.classpath
+.settings
