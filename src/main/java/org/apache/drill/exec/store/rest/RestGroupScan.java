@@ -14,7 +14,6 @@ import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -28,21 +27,25 @@ import java.util.regex.Pattern;
 @SuppressWarnings("WeakerAccess")
 public class RestGroupScan extends AbstractGroupScan {
 
-    private final static Pattern PATTERN = Pattern.compile("\\$\\{(\\S+)}");
+    private static final ScanStats HUGE_TABLE = new ScanStats(ScanStats.GroupScanProperty.NO_EXACT_ROW_COUNT, 1000L, 10.0f, 10.0f);
+    final static Pattern PATTERN = Pattern.compile("\\$\\{(\\S+)}");
 
     private final RestScanSpec spec;
     private List<SchemaPath> columns;
     private final RestStoragePlugin storagePlugin;
     private final RestStoragePluginConfig storagePluginConfig;
     private final Set<String> queryParameters;
+    private boolean filterPushedDown = false;
 
     @JsonCreator
     private RestGroupScan(@JsonProperty("userName") String userName,
                          @JsonProperty("spec") RestScanSpec restScanSpec,
                          @JsonProperty("storagePluginConfig") RestStoragePluginConfig storagePluginConfig,
                          @JsonProperty("columns") List<SchemaPath> columns,
+                         @JsonProperty("filterPushedDown") boolean filterPushedDown,
                          @JacksonInject StoragePluginRegistry pluginRegistry) throws IOException, ExecutionSetupException {
         this (userName, (RestStoragePlugin) pluginRegistry.getPlugin(storagePluginConfig), restScanSpec, columns);
+        this.filterPushedDown = filterPushedDown;
     }
 
     @JsonProperty
@@ -63,6 +66,20 @@ public class RestGroupScan extends AbstractGroupScan {
     @JsonIgnore
     public Set<String> getQueryParameters() {
         return queryParameters;
+    }
+
+    @JsonIgnore
+    public RestStoragePlugin getStoragePlugin() {
+        return storagePlugin;
+    }
+
+    @JsonProperty
+    public boolean isFilterPushedDown() {
+        return filterPushedDown;
+    }
+
+    public void setFilterPushedDown(@SuppressWarnings("SameParameterValue") boolean filterPushedDown) {
+        this.filterPushedDown = filterPushedDown;
     }
 
     public RestGroupScan(String userName, RestStoragePlugin plugin, RestScanSpec spec, List<SchemaPath> columns) {
@@ -92,6 +109,7 @@ public class RestGroupScan extends AbstractGroupScan {
         this.spec = that.spec;
         this.columns = that.columns;
         this.queryParameters = that.queryParameters;
+        this.filterPushedDown = that.filterPushedDown;
     }
 
     @Override
@@ -142,6 +160,9 @@ public class RestGroupScan extends AbstractGroupScan {
 
     @Override
     public ScanStats getScanStats() {
-        return ScanStats.TRIVIAL_TABLE;
+        if (filterPushedDown) {
+            return ScanStats.TRIVIAL_TABLE;
+        }
+        return HUGE_TABLE;
     }
 }

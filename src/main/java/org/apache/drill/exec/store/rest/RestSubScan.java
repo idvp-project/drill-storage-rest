@@ -1,9 +1,6 @@
 package org.apache.drill.exec.store.rest;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.*;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StoragePluginConfig;
@@ -53,6 +50,11 @@ public class RestSubScan extends AbstractSubScan {
 
     public int getOperatorType() {
         return -1;
+    }
+
+    @JsonIgnore
+    RestStoragePlugin getStoragePlugin() {
+        return storagePlugin;
     }
 
     @Override

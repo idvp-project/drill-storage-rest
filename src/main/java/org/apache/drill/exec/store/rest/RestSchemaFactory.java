@@ -34,7 +34,7 @@ public class RestSchemaFactory implements SchemaFactory {
     class RestSchema extends AbstractSchema {
 
         RestSchema(String name) {
-            super(Collections.<String>emptyList(), name);
+            super(Collections.emptyList(), name);
         }
 
         @Override
@@ -44,7 +44,7 @@ public class RestSchemaFactory implements SchemaFactory {
 
         @Override
         public Table getTable(String name) {
-            return new RestTable(plugin, schemaName, new RestScanSpec(name));
+            return new RestTable(plugin, schemaName, new RestScanSpec(name, Collections.emptyMap()));
         }
     }
 
