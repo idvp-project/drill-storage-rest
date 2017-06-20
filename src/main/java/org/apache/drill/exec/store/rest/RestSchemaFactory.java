@@ -44,7 +44,7 @@ public class RestSchemaFactory implements SchemaFactory {
 
         @Override
         public Table getTable(String name) {
-            return new RestTable(plugin, schemaName, new RestScanSpec(name, Collections.emptyMap()));
+            return new RestTable(plugin, schemaName, new RestScanSpec(name, Collections.emptyMap(), FilterPushDown.NONE));
         }
     }
 

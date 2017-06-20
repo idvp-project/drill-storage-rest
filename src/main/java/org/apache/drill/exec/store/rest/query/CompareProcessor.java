@@ -5,7 +5,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.drill.common.expression.*;
 import org.apache.drill.common.expression.visitors.AbstractExprVisitor;
 import org.apache.drill.exec.store.rest.RestGroupScan;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import java.util.Date;
 import java.util.Objects;
 import java.util.Set;
 
@@ -214,11 +217,11 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
         }
 
         if (valueArg instanceof ValueExpressions.TimeExpression) {
-            value = ((ValueExpressions.TimeExpression)valueArg).getTime();
+            value = new Duration(((ValueExpressions.TimeExpression)valueArg).getTime());
         }
 
         if (valueArg instanceof ValueExpressions.DateExpression) {
-            value = ((ValueExpressions.DateExpression)valueArg).getDate();
+            value = new DateTime(((ValueExpressions.DateExpression)valueArg).getDate());
         }
 
         if (valueArg instanceof ValueExpressions.BooleanExpression) {

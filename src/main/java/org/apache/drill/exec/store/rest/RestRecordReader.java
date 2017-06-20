@@ -1,7 +1,6 @@
 package org.apache.drill.exec.store.rest;
 
 import com.fasterxml.jackson.core.JsonParseException;
-import com.google.common.collect.ImmutableList;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ExecConstants;
@@ -11,12 +10,13 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.easy.json.JsonProcessor;
 import org.apache.drill.exec.store.easy.json.reader.CountingJsonReader;
-import org.apache.drill.exec.vector.complex.fn.JsonReader;
-import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
+import org.apache.drill.exec.vector.complex.fn.RestJsonReader;
+import org.apache.drill.exec.vector.complex.impl.EnhancedVectorContainerWriter;
 import org.apache.http.HttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROWS_PER_BATCH;
 
@@ -38,7 +38,7 @@ public class RestRecordReader extends AbstractRecordReader {
     private final boolean unionEnabled;
 
     private JsonProcessor jsonReader;
-    private VectorContainerWriter writer;
+    private EnhancedVectorContainerWriter writer;
     private JsonProcessor.ReadState write = null;
 
     RestRecordReader(FragmentContext fragmentContext,
@@ -59,11 +59,13 @@ public class RestRecordReader extends AbstractRecordReader {
     @Override
     public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
         try{
-            this.writer = new VectorContainerWriter(output, unionEnabled);
+            this.writer = new EnhancedVectorContainerWriter(output,
+                    unionEnabled,
+                    scan.getSpec().getFilterPushDown() == FilterPushDown.SOME ? scan.getSpec().getParameters() : Collections.emptyMap());
             if (isSkipQuery()) {
                 this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer());
             } else {
-                this.jsonReader = new JsonReader(fragmentContext.getManagedBuffer(), enableAllTextMode, true, readNumbersAsDouble);
+                this.jsonReader = new RestJsonReader(fragmentContext.getManagedBuffer(), enableAllTextMode, true, readNumbersAsDouble);
             }
             setupParser();
         }catch(final Exception e){

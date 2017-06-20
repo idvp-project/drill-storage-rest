@@ -35,14 +35,14 @@ public class RestGroupScan extends AbstractGroupScan {
     private final RestStoragePlugin storagePlugin;
     private final RestStoragePluginConfig storagePluginConfig;
     private final Set<String> queryParameters;
-    private boolean filterPushedDown = false;
+    private FilterPushDown filterPushedDown = FilterPushDown.NONE;
 
     @JsonCreator
     private RestGroupScan(@JsonProperty("userName") String userName,
                          @JsonProperty("spec") RestScanSpec restScanSpec,
                          @JsonProperty("storagePluginConfig") RestStoragePluginConfig storagePluginConfig,
                          @JsonProperty("columns") List<SchemaPath> columns,
-                         @JsonProperty("filterPushedDown") boolean filterPushedDown,
+                         @JsonProperty("filterPushedDown") FilterPushDown filterPushedDown,
                          @JacksonInject StoragePluginRegistry pluginRegistry) throws IOException, ExecutionSetupException {
         this (userName, (RestStoragePlugin) pluginRegistry.getPlugin(storagePluginConfig), restScanSpec, columns);
         this.filterPushedDown = filterPushedDown;
@@ -74,11 +74,14 @@ public class RestGroupScan extends AbstractGroupScan {
     }
 
     @JsonProperty
-    public boolean isFilterPushedDown() {
+    public FilterPushDown getFilterPushedDown() {
+        if (filterPushedDown == null) {
+            filterPushedDown = FilterPushDown.NONE;
+        }
         return filterPushedDown;
     }
 
-    public void setFilterPushedDown(@SuppressWarnings("SameParameterValue") boolean filterPushedDown) {
+    public void setFilterPushedDown(FilterPushDown filterPushedDown) {
         this.filterPushedDown = filterPushedDown;
     }
 
@@ -160,9 +163,10 @@ public class RestGroupScan extends AbstractGroupScan {
 
     @Override
     public ScanStats getScanStats() {
-        if (filterPushedDown) {
+        if (getFilterPushedDown() != FilterPushDown.NONE) {
             return ScanStats.TRIVIAL_TABLE;
         }
         return HUGE_TABLE;
     }
+
 }

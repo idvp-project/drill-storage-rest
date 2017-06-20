@@ -3,6 +3,7 @@ package org.apache.drill.exec.store.rest.query;
 import com.google.common.collect.ImmutableList;
 import org.apache.drill.common.expression.*;
 import org.apache.drill.common.expression.visitors.AbstractExprVisitor;
+import org.apache.drill.exec.store.rest.FilterPushDown;
 import org.apache.drill.exec.store.rest.RestGroupScan;
 import org.apache.drill.exec.store.rest.RestScanSpec;
 
@@ -119,7 +120,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
                 }
                 break;
         }
-        return new RestScanSpec(scan.getSpec().getQuery(), newFilter);
+        return new RestScanSpec(scan.getSpec().getQuery(), newFilter, FilterPushDown.SOME);
 
     }
 
@@ -127,7 +128,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
         SchemaPath field = processor.getPath();
         String name = field.getAsUnescapedPath();
         Object value = processor.getValue();
-        return new RestScanSpec(scan.getSpec().getQuery(), Collections.singletonMap(name, value));
+        return new RestScanSpec(scan.getSpec().getQuery(), Collections.singletonMap(name, value), FilterPushDown.SOME);
     }
 
     @Override

@@ -13,6 +13,7 @@ import org.apache.drill.exec.planner.physical.FilterPrel;
 import org.apache.drill.exec.planner.physical.PrelUtil;
 import org.apache.drill.exec.planner.physical.ScanPrel;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
+import org.apache.drill.exec.store.rest.FilterPushDown;
 import org.apache.drill.exec.store.rest.RestGroupScan;
 import org.apache.drill.exec.store.rest.RestScanSpec;
 
@@ -31,7 +32,7 @@ public class RestPushFilterIntoScan extends StoragePluginOptimizerRule {
         final FilterPrel filter = call.rel(0);
 
         RestGroupScan groupScan = (RestGroupScan) scan.getGroupScan();
-        if (groupScan.isFilterPushedDown()) {
+        if (groupScan.getFilterPushedDown() != FilterPushDown.NONE) {
             return; //already pushed down
         }
 
@@ -40,22 +41,21 @@ public class RestPushFilterIntoScan extends StoragePluginOptimizerRule {
 
         final LogicalExpression conditionExp = DrillOptiq.toDrill(new DrillParseContext(PrelUtil.getPlannerSettings(call.getPlanner())), scan, condition);
         final RestFilterBuilder filterBuilder = new RestFilterBuilder(groupScan, conditionExp);
-        final RestScanSpec newScanSpec = filterBuilder.parseTree();
+        RestScanSpec newScanSpec = filterBuilder.parseTree();
         if (newScanSpec == null) {
-            return; //no filter pushdown ==> No transformation.
+            return;
+        }
+
+        if (filterBuilder.isAllNodesConverted()) {
+            newScanSpec = new RestScanSpec(newScanSpec.getQuery(), newScanSpec.getParameters(), FilterPushDown.ALL);
         }
 
         final RestGroupScan newGroupsScan = new RestGroupScan(groupScan.getUserName(), groupScan.getStoragePlugin(),
                 newScanSpec, groupScan.getColumns());
-        newGroupsScan.setFilterPushedDown(true);
+        newGroupsScan.setFilterPushedDown(filterBuilder.isAllNodesConverted() ? FilterPushDown.ALL : FilterPushDown.SOME);
 
-        // Depending on whether is a project in the middle, assign either scan or copy of project to childRel.
         final RelNode childRel = ScanPrel.create(scan, filter.getTraitSet(), newGroupsScan, scan.getRowType());
         if (filterBuilder.isAllNodesConverted()) {
-            /*
-             * Since we could convert the entire filter condition expression into an REST filter,
-             * we can eliminate the filter operator altogether.
-             */
             call.transformTo(childRel);
         } else {
             call.transformTo(filter.copy(filter.getTraitSet(), ImmutableList.of(childRel)));
