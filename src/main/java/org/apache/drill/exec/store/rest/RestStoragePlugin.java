@@ -20,10 +20,12 @@ import org.apache.drill.exec.store.AbstractStoragePlugin;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.store.SchemaConfig;
 import org.apache.drill.exec.store.rest.query.RestPushFilterIntoScan;
-import org.apache.http.HttpResponse;
+import org.apache.drill.exec.store.rest.read.JsonRestRecordReader;
+import org.apache.drill.exec.store.rest.read.TextRestRecordReader;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -32,7 +34,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Oleg Zinoviev
@@ -87,12 +88,24 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
                 .build();
 
         HttpGet request = new HttpGet(createURI(scan.getSpec()));
-        HttpResponse response = client.execute(request);
+        CloseableHttpResponse response = client.execute(request);
         if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
             throw new ExecutionSetupException(response.getStatusLine().getReasonPhrase());
         }
 
-        RecordReader reader = new RestRecordReader(context, scan, client, response);
+        ContentType contentType = ContentType.getOrDefault(response.getEntity());
+
+        RecordReader reader;
+
+        if (Objects.equals(contentType.getMimeType(), ContentType.APPLICATION_JSON.getMimeType())) {
+            reader = new JsonRestRecordReader(context, scan, client, response);
+        } else if (Objects.equals(contentType.getMimeType(), ContentType.TEXT_HTML.getMimeType())
+                || Objects.equals(contentType.getMimeType(), ContentType.TEXT_PLAIN.getMimeType())) {
+            reader = new TextRestRecordReader(context, scan, client, response);
+        } else {
+            throw new ExecutionSetupException("Unknown content type: " + contentType);
+        }
+
         return new ScanBatch(scan, context, Collections.singleton(reader).iterator());
     }
 

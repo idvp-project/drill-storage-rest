@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.vector.complex.impl;
 
+import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.physical.impl.OutputMutator;
@@ -34,11 +35,11 @@ public class EnhancedVectorContainerWriter extends AbstractFieldWriter implement
     private final SpecialMapVector mapVector;
     private final OutputMutator mutator;
 
-    public EnhancedVectorContainerWriter(OutputMutator mutator, boolean unionEnabled, Map<String, Object> pushedDownFilters) {
+    public EnhancedVectorContainerWriter(DrillBuf buffer, OutputMutator mutator, boolean unionEnabled, Map<String, Object> pushedDownFilters) {
         super(null);
         this.mutator = mutator;
         mapVector = new SpecialMapVector(mutator.getCallBack());
-        mapRoot = new EnhancedSingleMapWriter(mapVector, this, unionEnabled, pushedDownFilters);
+        mapRoot = new EnhancedSingleMapWriter(buffer, mapVector, this, unionEnabled, pushedDownFilters);
     }
 
     @Override

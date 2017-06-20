@@ -1,11 +1,14 @@
 package org.apache.drill.exec.vector.complex.impl;
 
 import com.google.common.collect.Sets;
+import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.vector.complex.MapVector;
+import org.apache.drill.exec.vector.complex.fn.WorkingBufferProxy;
 import org.apache.drill.exec.vector.complex.writer.*;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -17,13 +20,15 @@ import java.util.Set;
 public class EnhancedSingleMapWriter extends SingleMapWriter {
     private final Map<String, Object> pushedDownFilters;
     private final Set<String> currentObjectFields = Sets.newHashSet();
+    private final WorkingBufferProxy workingBuffer;
 
-    EnhancedSingleMapWriter(MapVector container,
+    EnhancedSingleMapWriter(DrillBuf buffer, MapVector container,
                             FieldWriter parent,
                             boolean unionEnabled,
                             Map<String, Object> pushedDownFilters) {
         super(container, parent, unionEnabled);
         this.pushedDownFilters = pushedDownFilters == null ? Collections.emptyMap() : pushedDownFilters;
+        this.workingBuffer = new WorkingBufferProxy(buffer);
     }
 
     @Override
@@ -255,6 +260,14 @@ public class EnhancedSingleMapWriter extends SingleMapWriter {
                 time(entry.getKey()).writeTime((int) ((Duration) entry.getValue()).getMillis());
             } else if (entry.getValue() instanceof DateTime) {
                 date(entry.getKey()).writeDate(((DateTime) entry.getValue()).getMillis());
+            } else {
+                try {
+                    varChar(entry.getKey()).writeVarChar(0,
+                            workingBuffer.prepareVarCharHolder(entry.getValue().toString()),
+                            workingBuffer.getBuf());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
         }

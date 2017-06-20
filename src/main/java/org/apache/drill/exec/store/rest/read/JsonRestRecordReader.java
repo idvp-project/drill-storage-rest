@@ -1,4 +1,4 @@
-package org.apache.drill.exec.store.rest;
+package org.apache.drill.exec.store.rest.read;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -10,9 +10,11 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.easy.json.JsonProcessor;
 import org.apache.drill.exec.store.easy.json.reader.CountingJsonReader;
+import org.apache.drill.exec.store.rest.FilterPushDown;
+import org.apache.drill.exec.store.rest.RestSubScan;
 import org.apache.drill.exec.vector.complex.fn.RestJsonReader;
 import org.apache.drill.exec.vector.complex.impl.EnhancedVectorContainerWriter;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 import java.io.IOException;
@@ -24,15 +26,15 @@ import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROW
  * @author Oleg Zinoviev
  * @since 19.06.2017.
  */
-public class RestRecordReader extends AbstractRecordReader {
+public class JsonRestRecordReader extends AbstractRecordReader {
 
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RestRecordReader.class);
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JsonRestRecordReader.class);
 
 
     private final FragmentContext fragmentContext;
     private final RestSubScan scan;
     private final CloseableHttpClient client;
-    private final HttpResponse response;
+    private final CloseableHttpResponse response;
     private final boolean enableAllTextMode;
     private final boolean readNumbersAsDouble;
     private final boolean unionEnabled;
@@ -41,10 +43,10 @@ public class RestRecordReader extends AbstractRecordReader {
     private EnhancedVectorContainerWriter writer;
     private JsonProcessor.ReadState write = null;
 
-    RestRecordReader(FragmentContext fragmentContext,
-                     RestSubScan scan,
-                     CloseableHttpClient client,
-                     HttpResponse response) {
+    public JsonRestRecordReader(FragmentContext fragmentContext,
+                                RestSubScan scan,
+                                CloseableHttpClient client,
+                                CloseableHttpResponse response) {
         this.fragmentContext = fragmentContext;
         this.scan = scan;
         this.client = client;
@@ -59,7 +61,8 @@ public class RestRecordReader extends AbstractRecordReader {
     @Override
     public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
         try{
-            this.writer = new EnhancedVectorContainerWriter(output,
+            this.writer = new EnhancedVectorContainerWriter(fragmentContext.getManagedBuffer(),
+                    output,
                     unionEnabled,
                     scan.getSpec().getFilterPushDown() == FilterPushDown.SOME ? scan.getSpec().getParameters() : Collections.emptyMap());
             if (isSkipQuery()) {
@@ -105,6 +108,7 @@ public class RestRecordReader extends AbstractRecordReader {
         if(write == JsonProcessor.ReadState.JSON_RECORD_PARSE_EOF_ERROR){
             return recordCount;
         }
+
         while (recordCount < DEFAULT_ROWS_PER_BATCH) {
             try {
                 writer.setPosition(recordCount);
@@ -128,5 +132,7 @@ public class RestRecordReader extends AbstractRecordReader {
     @Override
     public void close() throws Exception {
         client.close();
+        response.close();
+        writer.close();
     }
 }
