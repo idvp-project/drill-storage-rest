@@ -26,6 +26,7 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.rest.FilterPushDown;
 import org.apache.drill.exec.store.rest.RestSubScan;
+import org.apache.drill.exec.vector.complex.fn.ReaderHelper;
 import org.apache.drill.exec.vector.complex.fn.WorkingBufferProxy;
 import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
@@ -105,7 +106,6 @@ public final class GenericRestRecordReader extends AbstractRecordReader {
                     }
 
                     ReaderHelper.write(mapWriter, entry.getKey(), entry.getValue(), workingBuffer);
-
                 }
 
 

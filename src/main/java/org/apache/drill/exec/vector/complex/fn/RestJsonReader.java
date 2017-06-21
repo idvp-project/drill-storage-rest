@@ -28,7 +28,6 @@ import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.GroupScan;
 import org.apache.drill.exec.store.easy.json.reader.BaseJsonProcessor;
-import org.apache.drill.exec.store.rest.read.ReaderHelper;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 import java.io.IOException;
@@ -42,7 +41,7 @@ import java.util.*;
 public class RestJsonReader extends BaseJsonProcessor {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RestJsonReader.class);
 
-    private final WorkingBufferProxy workingBuffer;
+    private final WorkingBuffer workingBuffer;
     private final List<SchemaPath> columns;
     private final boolean allTextMode;
     private final VectorOutput.MapVectorOutput mapOutput;
@@ -97,7 +96,7 @@ public class RestJsonReader extends BaseJsonProcessor {
         super(managedBuf);
         assert Preconditions.checkNotNull(columns).size() > 0 : "JSON record reader requires at least one column";
         this.selection = FieldSelection.getFieldSelection(columns);
-        this.workingBuffer = new WorkingBufferProxy(managedBuf);
+        this.workingBuffer = new WorkingBuffer(managedBuf);
         this.skipOuterList = skipOuterList;
         this.allTextMode = allTextMode;
         this.columns = columns;

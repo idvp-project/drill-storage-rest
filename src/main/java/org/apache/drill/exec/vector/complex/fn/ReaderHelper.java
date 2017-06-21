@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.rest.read;
+package org.apache.drill.exec.vector.complex.fn;
 
-import org.apache.drill.exec.vector.complex.fn.WorkingBufferProxy;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -32,7 +31,7 @@ public final class ReaderHelper {
     private ReaderHelper() {
     }
 
-    public static void write(BaseWriter.MapWriter mapWriter, String field, Object value, WorkingBufferProxy bufferProxy) throws IOException {
+    public static void write(BaseWriter.MapWriter mapWriter, String field, Object value, WorkingBuffer buffer) throws IOException {
         if (value == null) {
             return;
         }
@@ -51,8 +50,8 @@ public final class ReaderHelper {
             mapWriter.date(field).writeDate(((DateTime) value).getMillis());
         } else {
             mapWriter.varChar(field).writeVarChar(0,
-                    bufferProxy.prepareVarCharHolder(value.toString()),
-                    bufferProxy.getBuf());
+                    buffer.prepareVarCharHolder(value.toString()),
+                    buffer.getBuf());
         }
     }
 }
