@@ -10,52 +10,46 @@ import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.rest.FilterPushDown;
 import org.apache.drill.exec.store.rest.RestSubScan;
 import org.apache.drill.exec.vector.complex.fn.WorkingBufferProxy;
-import org.apache.drill.exec.vector.complex.impl.EnhancedVectorContainerWriter;
+import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.client.utils.HttpClientUtils;
+import org.apache.http.entity.ContentType;
 import org.apache.http.util.EntityUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Map;
 
 /**
  * @author Oleg Zinoviev
  * @since 20.06.2017.
  */
-public class TextRestRecordReader extends AbstractRecordReader {
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TextRestRecordReader.class);
+public final class GenericRestRecordReader extends AbstractRecordReader {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GenericRestRecordReader.class);
     private static final String CONTENT_COLUMN = "content";
+    private static final String CONTENT_TYPE_COLUMN = "content_type";
 
-    private final RestSubScan scan;
-    private final CloseableHttpClient client;
     private final CloseableHttpResponse response;
     private final WorkingBufferProxy workingBuffer;
-    private final FragmentContext fragmentContext;
+    private final Map<String, Object> pushedDownFilters;
 
-    private EnhancedVectorContainerWriter writer;
+    private VectorContainerWriter writer;
     private boolean read = false;
 
-    public TextRestRecordReader(FragmentContext fragmentContext,
-                                RestSubScan scan,
-                                CloseableHttpClient client,
-                                CloseableHttpResponse response) {
-        this.fragmentContext = fragmentContext;
-        this.scan = scan;
-        this.client = client;
+    public GenericRestRecordReader(FragmentContext fragmentContext,
+                                   RestSubScan scan,
+                                   CloseableHttpResponse response) {
         this.response = response;
         this.workingBuffer = new WorkingBufferProxy(fragmentContext.getManagedBuffer());
+        this.pushedDownFilters = scan.getSpec().getFilterPushDown() == FilterPushDown.SOME ? scan.getSpec().getParameters() : Collections.emptyMap();
     }
 
 
     @Override
     public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
         try{
-            this.writer = new EnhancedVectorContainerWriter(
-                    fragmentContext.getManagedBuffer(),
-                    output,
-                    false,
-                    scan.getSpec().getFilterPushDown() == FilterPushDown.SOME ? scan.getSpec().getParameters() : Collections.emptyMap());
+            this.writer = new VectorContainerWriter(output, false);
         }catch(final Exception e){
             handleAndRaise(e);
         }
@@ -77,9 +71,26 @@ public class TextRestRecordReader extends AbstractRecordReader {
                 BaseWriter.MapWriter mapWriter = writer.rootAsMap();
                 mapWriter.start();
 
+                String mimeType = ContentType.getOrDefault(response.getEntity()).getMimeType();
+
                 mapWriter.varChar(CONTENT_COLUMN).writeVarChar(0,
                         workingBuffer.prepareVarCharHolder(text),
                         workingBuffer.getBuf());
+                mapWriter.varChar(CONTENT_TYPE_COLUMN).writeVarChar(0,
+                        workingBuffer.prepareVarCharHolder(mimeType),
+                        workingBuffer.getBuf());
+
+                for (Map.Entry<String, Object> entry : pushedDownFilters.entrySet()) {
+                    if (CONTENT_COLUMN.equals(entry.getKey())
+                            || CONTENT_TYPE_COLUMN.equals(entry.getKey())
+                            || entry.getValue() == null) {
+                        continue;
+                    }
+
+                    ReaderHelper.write(mapWriter, entry.getKey(), entry.getValue(), workingBuffer);
+
+                }
+
 
                 mapWriter.end();
 
@@ -97,8 +108,7 @@ public class TextRestRecordReader extends AbstractRecordReader {
 
     @Override
     public void close() throws Exception {
-        response.close();
-        client.close();
+        HttpClientUtils.closeQuietly(response);
         writer.close();
     }
 

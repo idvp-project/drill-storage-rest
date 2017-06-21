@@ -11,12 +11,12 @@ import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.GroupScan;
 import org.apache.drill.exec.store.easy.json.reader.BaseJsonProcessor;
+import org.apache.drill.exec.store.rest.read.ReaderHelper;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Oleg Zinoviev
@@ -25,7 +25,7 @@ import java.util.List;
 public class RestJsonReader extends BaseJsonProcessor {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RestJsonReader.class);
 
-    private final WorkingBuffer workingBuffer;
+    private final WorkingBufferProxy workingBuffer;
     private final List<SchemaPath> columns;
     private final boolean allTextMode;
     private final VectorOutput.MapVectorOutput mapOutput;
@@ -46,6 +46,11 @@ public class RestJsonReader extends BaseJsonProcessor {
     private final boolean skipOuterList;
 
     /**
+     * Фильтры, проброшенные в REST запрос
+     */
+    private final Map<String, Object> pushedDownFilters;
+
+    /**
      * Whether the reader is currently in a situation where we are unwrapping an
      * outer list.
      */
@@ -57,18 +62,25 @@ public class RestJsonReader extends BaseJsonProcessor {
 
     private FieldSelection selection;
 
-    public RestJsonReader(DrillBuf managedBuf, boolean allTextMode,
-                      boolean skipOuterList, boolean readNumbersAsDouble) {
+    public RestJsonReader(DrillBuf managedBuf,
+                          boolean allTextMode,
+                          boolean skipOuterList,
+                          boolean readNumbersAsDouble,
+                          Map<String, Object> pushedDownFilters) {
         this(managedBuf, GroupScan.ALL_COLUMNS, allTextMode, skipOuterList,
-                readNumbersAsDouble);
+                readNumbersAsDouble, pushedDownFilters);
     }
 
-    private RestJsonReader(DrillBuf managedBuf, List<SchemaPath> columns,
-                           boolean allTextMode, boolean skipOuterList, boolean readNumbersAsDouble) {
+    private RestJsonReader(DrillBuf managedBuf,
+                           List<SchemaPath> columns,
+                           boolean allTextMode,
+                           boolean skipOuterList,
+                           boolean readNumbersAsDouble,
+                           Map<String, Object> pushedDownFilters) {
         super(managedBuf);
         assert Preconditions.checkNotNull(columns).size() > 0 : "JSON record reader requires at least one column";
         this.selection = FieldSelection.getFieldSelection(columns);
-        this.workingBuffer = new WorkingBuffer(managedBuf);
+        this.workingBuffer = new WorkingBufferProxy(managedBuf);
         this.skipOuterList = skipOuterList;
         this.allTextMode = allTextMode;
         this.columns = columns;
@@ -76,6 +88,7 @@ public class RestJsonReader extends BaseJsonProcessor {
         this.listOutput = new VectorOutput.ListVectorOutput(workingBuffer);
         this.currentFieldName = "<none>";
         this.readNumbersAsDouble = readNumbersAsDouble;
+        this.pushedDownFilters = pushedDownFilters == null ? Collections.emptyMap() : pushedDownFilters;
     }
 
     @SuppressWarnings("resource")
@@ -282,9 +295,9 @@ public class RestJsonReader extends BaseJsonProcessor {
 
     private void writeDataSwitch(BaseWriter.MapWriter w) throws IOException {
         if (this.allTextMode) {
-            writeDataAllText(w, this.selection, true);
+            writeDataAllText(w, this.selection, true, true);
         } else {
-            writeData(w, this.selection, true);
+            writeData(w, this.selection, true, true);
         }
     }
 
@@ -316,9 +329,11 @@ public class RestJsonReader extends BaseJsonProcessor {
      *          token and ignore the current one.
      */
     private void writeData(BaseWriter.MapWriter map, FieldSelection selection,
-                           boolean moveForward) throws IOException {
+                           boolean moveForward,
+                           boolean root) throws IOException {
         //
         map.start();
+        final Set<String> currentObjectFields = new HashSet<>();
         try {
             outside: while (true) {
 
@@ -337,6 +352,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                         "Expected FIELD_NAME but got %s.", t.name());
 
                 final String fieldName = parser.getText();
+                currentObjectFields.add(fieldName);
                 this.currentFieldName = fieldName;
                 FieldSelection childSelection = selection.getChild(fieldName);
                 if (childSelection.isNeverValid()) {
@@ -350,7 +366,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                         break;
                     case START_OBJECT:
                         if (!writeMapDataIfTyped(map, fieldName)) {
-                            writeData(map.map(fieldName), childSelection, false);
+                            writeData(map.map(fieldName), childSelection, false, false);
                         }
                         break;
                     case END_OBJECT:
@@ -389,15 +405,30 @@ public class RestJsonReader extends BaseJsonProcessor {
 
             }
         } finally {
+            if (root) {
+
+                for (Map.Entry<String, Object> entry : pushedDownFilters.entrySet()) {
+                    if (currentObjectFields.contains(entry.getKey()) || entry.getValue() == null) {
+                        continue;
+                    }
+
+                    ReaderHelper.write(map, entry.getKey(), entry.getValue(), workingBuffer);
+                }
+            }
+
+            currentObjectFields.clear();
+
             map.end();
         }
 
     }
 
     private void writeDataAllText(BaseWriter.MapWriter map, FieldSelection selection,
-                                  boolean moveForward) throws IOException {
+                                  boolean moveForward,
+                                  boolean root) throws IOException {
         //
         map.start();
+        final Set<String> currentObjectFields = new HashSet<>();
         outside: while (true) {
 
             JsonToken t;
@@ -416,6 +447,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                     "Expected FIELD_NAME but got %s.", t.name());
 
             final String fieldName = parser.getText();
+            currentObjectFields.add(fieldName);
             this.currentFieldName = fieldName;
             FieldSelection childSelection = selection.getChild(fieldName);
             if (childSelection.isNeverValid()) {
@@ -429,7 +461,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                     break;
                 case START_OBJECT:
                     if (!writeMapDataIfTyped(map, fieldName)) {
-                        writeDataAllText(map.map(fieldName), childSelection, false);
+                        writeDataAllText(map.map(fieldName), childSelection, false, false);
                     }
                     break;
                 case END_OBJECT:
@@ -453,6 +485,17 @@ public class RestJsonReader extends BaseJsonProcessor {
                             parser.getCurrentToken()).build(logger);
             }
         }
+        if (root) {
+            for (Map.Entry<String, Object> entry : pushedDownFilters.entrySet()) {
+                if (currentObjectFields.contains(entry.getKey()) || entry.getValue() == null) {
+                    continue;
+                }
+                map.varChar(entry.getKey()).writeVarChar(0,
+                        workingBuffer.prepareVarCharHolder(entry.getValue().toString()),
+                        workingBuffer.getBuf());
+            }
+        }
+
         map.end();
 
     }
@@ -512,7 +555,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                         break;
                     case START_OBJECT:
                         if (!writeListDataIfTyped(list)) {
-                            writeData(list.map(), FieldSelection.ALL_VALID, false);
+                            writeData(list.map(), FieldSelection.ALL_VALID, false, false);
                         }
                         break;
                     case END_ARRAY:
@@ -584,7 +627,7 @@ public class RestJsonReader extends BaseJsonProcessor {
                     break;
                 case START_OBJECT:
                     if (!writeListDataIfTyped(list)) {
-                        writeDataAllText(list.map(), FieldSelection.ALL_VALID, false);
+                        writeDataAllText(list.map(), FieldSelection.ALL_VALID, false, false);
                     }
                     break;
                 case END_ARRAY:

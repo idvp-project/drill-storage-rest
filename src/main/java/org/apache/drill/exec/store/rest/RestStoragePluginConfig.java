@@ -1,11 +1,15 @@
 package org.apache.drill.exec.store.rest;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
-import org.apache.drill.common.logical.StoragePluginConfigBase;
+import org.apache.drill.exec.store.rest.config.QueryConfig;
+import org.apache.drill.exec.store.rest.config.RuntimeConfigBuilder;
+import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
+import org.apache.drill.exec.store.rest.config.ServiceConfigBase;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,40 +18,31 @@ import java.util.Objects;
  * @since 15.06.2017.
  */
 @JsonTypeName(RestStoragePluginConfig.NAME)
-public class RestStoragePluginConfig extends StoragePluginConfigBase {
+public class RestStoragePluginConfig extends ServiceConfigBase {
 
     static final String NAME = "rest";
-
-    private final String url;
-    private final Map<String, Object> config;
-    private final Map<String, String> headers;
+    private final Map<String, QueryConfig> queries;
 
     @JsonCreator
     public RestStoragePluginConfig(@JsonProperty(value = "url", required = true) String url,
-                                   @JsonProperty(value = "config") Map<String, Object> config,
-                                   @JsonProperty(value = "headers") Map<String, String> headers) {
-
-        this.url = Preconditions.checkNotNull(url, "url cannot be null");
-        this.config = config;
-        this.headers = headers;
+                                   @JsonProperty(value = "headers") Map<String, String> headers,
+                                   @JsonProperty(value = "queries") Map<String, QueryConfig> queries,
+                                   @JsonProperty(value = "config") Map<String, Object> config) {
+        super(url, headers, config);
+        this.queries = queries == null ? Collections.emptyMap() : queries;
     }
 
-    @SuppressWarnings("unused")
     @JsonProperty
-    public String getUrl() {
-        return url;
+    public Map<String, QueryConfig> getQueries() {
+        return queries;
     }
 
-    @SuppressWarnings("unused")
-    @JsonProperty
-    public Map<String, Object> getConfig() {
-        return config;
-    }
-
-    @SuppressWarnings("unused")
-    @JsonProperty
-    public Map<String, String> getHeaders() {
-        return headers;
+    @JsonIgnore
+    RuntimeQueryConfig getRuntimeConfig(String query) {
+        return new RuntimeConfigBuilder()
+                .withQuery(query)
+                .withRootConfig(this)
+                .build();
     }
 
     @Override
@@ -60,7 +55,8 @@ public class RestStoragePluginConfig extends StoragePluginConfigBase {
         RestStoragePluginConfig that = (RestStoragePluginConfig) o;
         return Objects.equals(url, that.url)
                 && Objects.equals(config, that.config)
-                && Objects.equals(headers, that.headers);
+                && Objects.equals(headers, that.headers)
+                && Objects.equals(queries, that.queries);
     }
 
     @Override
@@ -68,6 +64,7 @@ public class RestStoragePluginConfig extends StoragePluginConfigBase {
         return 56
                 ^ Objects.hashCode(url)
                 ^ Objects.hashCode(config)
-                ^ Objects.hashCode(headers);
+                ^ Objects.hashCode(headers)
+                ^ Objects.hashCode(queries);
     }
 }

@@ -2,7 +2,6 @@ package org.apache.drill.exec.store.rest;
 
 import com.fasterxml.jackson.annotation.*;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.PhysicalOperatorSetupException;
@@ -12,12 +11,12 @@ import org.apache.drill.exec.physical.base.ScanStats;
 import org.apache.drill.exec.physical.base.SubScan;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.store.StoragePluginRegistry;
+import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
+import org.apache.drill.exec.store.rest.helpers.VelocityHelper;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @author Oleg Zinoviev
@@ -28,13 +27,12 @@ import java.util.regex.Pattern;
 public class RestGroupScan extends AbstractGroupScan {
 
     private static final ScanStats HUGE_TABLE = new ScanStats(ScanStats.GroupScanProperty.NO_EXACT_ROW_COUNT, 1000L, 10.0f, 10.0f);
-    final static Pattern PATTERN = Pattern.compile("\\$\\{(\\S+)}");
 
     private final RestScanSpec spec;
     private List<SchemaPath> columns;
     private final RestStoragePlugin storagePlugin;
     private final RestStoragePluginConfig storagePluginConfig;
-    private final Set<String> queryParameters;
+    private Set<String> queryParameters;
     private FilterPushDown filterPushedDown = FilterPushDown.NONE;
 
     @JsonCreator
@@ -65,6 +63,9 @@ public class RestGroupScan extends AbstractGroupScan {
 
     @JsonIgnore
     public Set<String> getQueryParameters() {
+        if (queryParameters == null) {
+            queryParameters = getQueryParameters(spec);
+        }
         return queryParameters;
     }
 
@@ -96,13 +97,8 @@ public class RestGroupScan extends AbstractGroupScan {
 
     private Set<String> getQueryParameters(RestScanSpec spec) {
         String query = Preconditions.checkNotNull(spec.getQuery());
-
-        ImmutableSet.Builder<String> builder = ImmutableSet.builder();
-        Matcher matcher = PATTERN.matcher(query);
-        while (matcher.find()) {
-            builder.add(matcher.group(1));
-        }
-        return builder.build();
+        RuntimeQueryConfig config = storagePluginConfig.getRuntimeConfig(query);
+        return VelocityHelper.INSTANCE.parameters(config);
     }
 
     public RestGroupScan(RestGroupScan that) {
