@@ -38,6 +38,7 @@ import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
 import org.apache.drill.exec.store.rest.query.RestPushFilterIntoScan;
 import org.apache.drill.exec.store.rest.read.GenericRestRecordReader;
 import org.apache.drill.exec.store.rest.read.JsonRestRecordReader;
+import org.apache.drill.exec.store.rest.read.XmlRestRecordReader;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -59,6 +60,7 @@ import java.util.Set;
 @SuppressWarnings("FieldCanBeLocal")
 public class RestStoragePlugin extends AbstractStoragePlugin {
 
+    private static final String APPLICATION_SOAP_XML = "application/soap+xml";
 
     @SuppressWarnings("unused")
     private final DrillbitContext context;
@@ -112,12 +114,19 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
         CloseableHttpResponse response = client.execute(request);
         handleResponseStatus(response);
 
-        ContentType contentType = ContentType.getOrDefault(response.getEntity());
+        ContentType contentType = ContentType.TEXT_PLAIN;
+        if (!config.isIgnoreContentType()) {
+            contentType = ContentType.getOrDefault(response.getEntity());
+        }
 
         RecordReader reader;
 
         if (Objects.equals(contentType.getMimeType(), ContentType.APPLICATION_JSON.getMimeType())) {
             reader = new JsonRestRecordReader(context, scan, response);
+        } else if (Objects.equals(contentType.getMimeType(), ContentType.APPLICATION_XML.getMimeType())
+                || Objects.equals(contentType.getMimeType(), ContentType.TEXT_XML.getMimeType())
+                || Objects.equals(contentType.getMimeType(), APPLICATION_SOAP_XML)) {
+            reader = new XmlRestRecordReader(context, scan, response);
         } else {
             reader = new GenericRestRecordReader(context, scan, response);
         }

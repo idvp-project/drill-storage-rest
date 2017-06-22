@@ -29,27 +29,24 @@ import javax.inject.Inject;
 
 /**
  * @author Oleg Zinoviev
- * @since 21.06.2017.
+ * @since 22.06.2017.
  */
 @SuppressWarnings("unused")
-public class SelectorFunctions {
-    private SelectorFunctions() {
+public class DecodeFunctions {
+    private DecodeFunctions() {
     }
 
-    @FunctionTemplate(name = "selector_CSS",
+    @FunctionTemplate(name = "decode_URL",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
             isRandom = true)
-    public static class DOMSelectorVarCharFunc implements DrillSimpleFunc {
+    public static class UrlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
         VarCharHolder source;
 
-        @Param
-        VarCharHolder selector;
-
         @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+        VarCharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -60,24 +57,21 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.DOMSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source, output, buffer);
         }
     }
 
-    @FunctionTemplate(name = "selector_CSS",
+    @FunctionTemplate(name = "decode_URL",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
             isRandom = true)
-    public static class DOMSelectorVar16CharFunc implements DrillSimpleFunc {
+    public static class UrlDecodeVar16CharFunc implements DrillSimpleFunc {
 
         @Param
         Var16CharHolder source;
 
-        @Param
-        Var16CharHolder selector;
-
         @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+        Var16CharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -88,24 +82,21 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.DOMSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source, output, buffer);
         }
     }
 
-    @FunctionTemplate(name = "selector_XPath",
+    @FunctionTemplate(name = "decode_XML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
             isRandom = true)
-    public static class XPathSelectorVarCharFunc implements DrillSimpleFunc {
+    public static class XmlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
         VarCharHolder source;
 
-        @Param
-        VarCharHolder selector;
-
         @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+        VarCharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -116,24 +107,21 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.XPathSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source, output, buffer);
         }
     }
 
-    @FunctionTemplate(name = "selector_XPath",
+    @FunctionTemplate(name = "decode_XML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
             isRandom = true)
-    public static class XPathSelectorVar16CharFunc implements DrillSimpleFunc {
+    public static class XmlDecodeVar16CharFunc implements DrillSimpleFunc {
 
         @Param
         Var16CharHolder source;
 
-        @Param
-        Var16CharHolder selector;
-
         @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+        Var16CharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -144,7 +132,7 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.XPathSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source, output, buffer);
         }
     }
 }

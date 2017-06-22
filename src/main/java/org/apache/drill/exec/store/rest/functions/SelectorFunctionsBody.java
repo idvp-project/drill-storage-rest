@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,12 +19,28 @@ package org.apache.drill.exec.store.rest.functions;
 
 import com.google.common.base.Charsets;
 import io.netty.buffer.DrillBuf;
-import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
-import org.apache.drill.exec.expr.holders.*;
+import org.apache.commons.io.IOUtils;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
+import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.*;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Oleg Zinoviev
@@ -43,9 +59,9 @@ public final class SelectorFunctionsBody {
                                 ValueHolder selector,
                                 BaseWriter.ComplexWriter output,
                                 DrillBuf buffer) {
-            String html = asString(source);
-            String localSelector = asString(selector);
-            Document parse = org.jsoup.Jsoup.parse(html);
+            String html = VarCharHelper.asString(source);
+            String localSelector = VarCharHelper.asString(selector);
+            Document parse = Jsoup.parse(html);
             Elements elements = parse.select(localSelector);
             BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
@@ -58,25 +74,52 @@ public final class SelectorFunctionsBody {
             }
             listWriter.endList();
         }
+    }
 
-        private static String asString(ValueHolder source) {
-            String html;
-            if (source instanceof VarCharHolder) {
-                VarCharHolder vch = (VarCharHolder) source;
-                html = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
-            } else if (source instanceof NullableVarCharHolder) {
-                NullableVarCharHolder vch = (NullableVarCharHolder) source;
-                html = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
-            } else if (source instanceof Var16CharHolder) {
-                Var16CharHolder vch = (Var16CharHolder) source;
-                html = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
-            } else if (source instanceof NullableVar16CharHolder) {
-                NullableVar16CharHolder vch = (NullableVar16CharHolder) source;
-                html = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
-            } else {
-                throw new RuntimeException("Unsupported type");
+    public static class XPathSelectorFuncBody {
+        private XPathSelectorFuncBody() {
+        }
+
+        public static void eval(ValueHolder source,
+                                ValueHolder selector,
+                                BaseWriter.ComplexWriter output,
+                                DrillBuf buffer) {
+            try {
+                String xml = VarCharHelper.asString(source);
+                String localSelector = VarCharHelper.asString(selector);
+
+                InputStream stream = IOUtils.toInputStream(xml, StandardCharsets.UTF_8);
+
+                try {
+                    XPathFactory xPathFactory = XPathFactory.newInstance();
+                    XPath xPath = xPathFactory.newXPath();
+                    XPathExpression expression = xPath.compile(localSelector);
+                    NodeList elements = (NodeList) expression.evaluate(new InputSource(stream), XPathConstants.NODESET);
+
+                    Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+
+                    BaseWriter.ListWriter listWriter = output.rootAsList();
+                    listWriter.startList();
+                    for (int i = 0; i < elements.getLength(); i++) {
+                        Node element = elements.item(i);
+                        StringWriter writer = new StringWriter();
+                        transformer.transform(new DOMSource(element), new StreamResult(writer));
+
+                        String inner = writer.toString();
+                        final byte[] strBytes = inner.getBytes(Charsets.UTF_8);
+                        buffer = buffer.reallocIfNeeded(strBytes.length);
+                        buffer.setBytes(0, strBytes);
+                        listWriter.varChar().writeVarChar(0, strBytes.length, buffer);
+                    }
+                    listWriter.endList();
+                } finally {
+                    IOUtils.closeQuietly(stream);
+                }
+
+            } catch (XPathExpressionException | TransformerException e) {
+                throw new DrillRuntimeException(e);
             }
-            return html;
         }
     }
 }

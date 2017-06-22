@@ -43,17 +43,17 @@ import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROW
  * @author Oleg Zinoviev
  * @since 19.06.2017.
  */
-public final class JsonRestRecordReader extends AbstractRecordReader {
+public class JsonRestRecordReader extends AbstractRecordReader {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JsonRestRecordReader.class);
 
     private final FragmentContext fragmentContext;
     private final RestSubScan scan;
-    private final CloseableHttpResponse response;
+    final CloseableHttpResponse response;
     private final boolean enableAllTextMode;
     private final boolean readNumbersAsDouble;
     private final boolean unionEnabled;
 
-    private JsonProcessor jsonReader;
+    JsonProcessor jsonReader;
     private VectorContainerWriter writer;
     private JsonProcessor.ReadState write = null;
 
@@ -89,7 +89,7 @@ public final class JsonRestRecordReader extends AbstractRecordReader {
         }
     }
 
-    private void setupParser() throws IOException {
+    void setupParser() throws IOException {
         jsonReader.setSource(response.getEntity().getContent());
     }
 
