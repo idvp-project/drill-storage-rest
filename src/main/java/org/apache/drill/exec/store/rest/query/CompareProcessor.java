@@ -24,6 +24,8 @@ import org.apache.drill.exec.store.rest.RestGroupScan;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.Objects;
 import java.util.Set;
 
@@ -40,6 +42,10 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
             .build();
 
     private static final ImmutableSet<Class<? extends LogicalExpression>> VALUE_EXPRESSION_CLASSES = ImmutableSet.<Class<? extends LogicalExpression>>builder()
+            .add(ValueExpressions.Decimal9Expression.class)
+            .add(ValueExpressions.Decimal18Expression.class)
+            .add(ValueExpressions.Decimal28Expression.class)
+            .add(ValueExpressions.Decimal38Expression.class)
             .add(ValueExpressions.BooleanExpression.class)
             .add(ValueExpressions.DateExpression.class)
             .add(ValueExpressions.DoubleExpression.class)
@@ -48,6 +54,9 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
             .add(ValueExpressions.LongExpression.class)
             .add(ValueExpressions.QuotedString.class)
             .add(ValueExpressions.TimeExpression.class)
+            .add(ValueExpressions.IntervalDayExpression.class)
+            .add(ValueExpressions.IntervalYearExpression.class)
+            .add(NullExpression.class)
             .build();
 
     static boolean isCompareFunction(String function) {
@@ -202,53 +211,110 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
     }
 
     @Override
-    public Boolean visitSchemaPath(SchemaPath path, LogicalExpression valueArg) throws RuntimeException {
-        this.path = path;
-        boolean success = scan.getQueryParameters().contains(path.getAsUnescapedPath());
-        if (valueArg instanceof ValueExpressions.QuotedString) {
-            this.value = ((ValueExpressions.QuotedString) valueArg).getString();
-        } else {
-            return success && value(valueArg);
-        }
-        return success;
+    public Boolean visitBooleanConstant(ValueExpressions.BooleanExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getBoolean();
+        return true;
     }
 
-    private boolean value(LogicalExpression valueArg) {
-        Object value = null;
-        if (valueArg instanceof ValueExpressions.IntExpression) {
-            value = ((ValueExpressions.IntExpression)valueArg).getInt();
-        }
+    @Override
+    public Boolean visitDateConstant(ValueExpressions.DateExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = new DateTime(e.getDate());
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.LongExpression) {
-            value = ((ValueExpressions.LongExpression)valueArg).getLong();
-        }
+    @Override
+    public Boolean visitDecimal9Constant(ValueExpressions.Decimal9Expression e, LogicalExpression value) throws RuntimeException {
+        this.value = BigDecimal.valueOf(e.getIntFromDecimal(), e.getScale()).round(new MathContext(e.getPrecision()));
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.FloatExpression) {
-            value = ((ValueExpressions.FloatExpression)valueArg).getFloat();
-        }
+    @Override
+    public Boolean visitDecimal18Constant(ValueExpressions.Decimal18Expression e, LogicalExpression value) throws RuntimeException {
+        this.value = BigDecimal.valueOf(e.getLongFromDecimal(), e.getScale()).round(new MathContext(e.getPrecision()));
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.DoubleExpression) {
-            value = ((ValueExpressions.DoubleExpression)valueArg).getDouble();
-        }
+    @Override
+    public Boolean visitDecimal28Constant(ValueExpressions.Decimal28Expression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getBigDecimal();
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.TimeExpression) {
-            value = new Duration(((ValueExpressions.TimeExpression)valueArg).getTime());
-        }
+    @Override
+    public Boolean visitDecimal38Constant(ValueExpressions.Decimal38Expression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getBigDecimal();
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.DateExpression) {
-            value = new DateTime(((ValueExpressions.DateExpression)valueArg).getDate());
-        }
+    @Override
+    public Boolean visitDoubleConstant(ValueExpressions.DoubleExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getDouble();
+        return true;
+    }
 
-        if (valueArg instanceof ValueExpressions.BooleanExpression) {
-            value = ((ValueExpressions.BooleanExpression)valueArg).getBoolean();
-        }
+    @Override
+    public Boolean visitFloatConstant(ValueExpressions.FloatExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getFloat();
+        return true;
+    }
 
-        if (value == null) {
+    @Override
+    public Boolean visitIntConstant(ValueExpressions.IntExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getInt();
+        return true;
+    }
+
+    @Override
+    public Boolean visitLongConstant(ValueExpressions.LongExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getLong();
+        return true;
+    }
+
+    @Override
+    public Boolean visitNullConstant(TypedNullConstant e, LogicalExpression value) throws RuntimeException {
+        this.value = null;
+        return true;
+    }
+
+    @Override
+    public Boolean visitTimeConstant(ValueExpressions.TimeExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = Duration.millis(e.getTime());
+        return true;
+    }
+
+    @Override
+    public Boolean visitIntervalDayConstant(ValueExpressions.IntervalDayExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = Duration.millis(e.getIntervalMillis());
+        return true;
+    }
+
+    @Override
+    public Boolean visitIntervalYearConstant(ValueExpressions.IntervalYearExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = Duration.standardDays(e.getIntervalYear() * 365); //TODO високосный год
+        return true;
+    }
+
+    @Override
+    public Boolean visitTimeStampConstant(ValueExpressions.TimeStampExpression e, LogicalExpression value) throws RuntimeException {
+        this.value = Duration.millis(e.getTimeStamp());
+        return true;
+    }
+
+    @Override
+    public Boolean visitQuotedStringConstant(ValueExpressions.QuotedString e, LogicalExpression value) throws RuntimeException {
+        this.value = e.getString();
+        return true;
+    }
+
+    @Override
+    public Boolean visitSchemaPath(SchemaPath path, LogicalExpression valueArg) throws RuntimeException {
+        if (!VALUE_EXPRESSION_CLASSES.contains(valueArg.getClass())) {
             return false;
         }
 
-        this.value = value;
-        return true;
+        this.path = path;
+        boolean success = scan.getQueryParameters().contains(path.getAsUnescapedPath());
+        return success && valueArg.accept(this, valueArg);
     }
 
 }

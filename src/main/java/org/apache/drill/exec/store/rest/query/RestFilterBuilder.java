@@ -105,11 +105,9 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
                         if (value == null) {
                             newFilter.put(entry.getKey(), entry.getValue());
                         } else {
-                            List<Object> aggValue = new ArrayList<>();
+                            ImmutableList.Builder<Object> aggValue = ImmutableList.builder();
                             if (value instanceof Iterable<?>) {
-                                for (Object v : (Iterable<?>) value) {
-                                    aggValue.add(v);
-                                }
+                                aggValue.addAll((Iterable<?>) value);
                             } else if (value.getClass().isArray()) {
                                 aggValue.addAll(Arrays.asList((Object[]) value));
                             } else {
@@ -118,9 +116,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
 
                             if (entry.getValue() != null) {
                                 if (entry.getValue() instanceof Iterable<?>) {
-                                    for (Object v : (Iterable<?>) entry.getValue()) {
-                                        aggValue.add(v);
-                                    }
+                                    aggValue.addAll((Iterable<?>) entry.getValue());
                                 } else if (entry.getValue().getClass().isArray()) {
                                     aggValue.addAll(Arrays.asList((Object[]) entry.getValue()));
                                 } else {
@@ -128,7 +124,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
                                 }
                             }
 
-                            newFilter.put(entry.getKey(), aggValue.toArray());
+                            newFilter.put(entry.getKey(), aggValue.build());
                         }
 
                     } else {
