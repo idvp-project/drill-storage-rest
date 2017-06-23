@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.rest.read;
 import org.apache.commons.io.Charsets;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.store.rest.RestSubScan;
+import org.apache.drill.exec.store.rest.functions.FunctionsHelper;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
@@ -41,10 +42,12 @@ public final class XmlRestRecordReader extends JsonRestRecordReader {
 
     @Override
     void setupParser() throws IOException {
-        //TODO нормальый парсинг
         String xml = EntityUtils.toString(response.getEntity(), Charsets.UTF_8);
-        JSONObject xmlJSONObj = XML.toJSONObject(xml);
+        String result = FunctionsHelper.removeNamespaces(xml);
+        JSONObject xmlJSONObj = XML.toJSONObject(result);
         String json = xmlJSONObj.toString();
         jsonReader.setSource(new ByteArrayInputStream(json.getBytes(Charsets.UTF_8)));
+
     }
+
 }

@@ -23,7 +23,7 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
-import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 import javax.inject.Inject;
 
@@ -32,21 +32,21 @@ import javax.inject.Inject;
  * @since 22.06.2017.
  */
 @SuppressWarnings("unused")
-public class DecodeFunctions {
-    private DecodeFunctions() {
+public class ConvertFunctions {
+    private ConvertFunctions() {
     }
 
-    @FunctionTemplate(name = "decode_URL",
+    @FunctionTemplate(name = "convert_fromXML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
             isRandom = true)
-    public static class UrlDecodeVarCharFunc implements DrillSimpleFunc {
+    public static class ConvertFromXmlFunc implements DrillSimpleFunc {
 
         @Param
         VarBinaryHolder source;
 
         @Output
-        VarCharHolder output;
+        BaseWriter.ComplexWriter output;
 
         @Inject
         DrillBuf buffer;
@@ -57,32 +57,7 @@ public class DecodeFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source, output, buffer);
-        }
-    }
-
-    @FunctionTemplate(name = "decode_XML",
-            scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
-            isRandom = true)
-    public static class XmlDecodeVarCharFunc implements DrillSimpleFunc {
-
-        @Param
-        VarBinaryHolder source;
-
-        @Output
-        VarCharHolder output;
-
-        @Inject
-        DrillBuf buffer;
-
-        @Override
-        public void setup() {
-        }
-
-        @Override
-        public void eval() {
-            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source, output, buffer);
+            org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source, output, buffer);
         }
     }
 

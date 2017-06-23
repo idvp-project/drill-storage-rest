@@ -19,7 +19,6 @@ package org.apache.drill.exec.store.rest;
 
 import com.fasterxml.jackson.annotation.*;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.exec.physical.base.AbstractSubScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.store.StoragePluginRegistry;
@@ -36,7 +35,7 @@ public class RestSubScan extends AbstractSubScan {
 
     private final RestScanSpec spec;
     private final RestStoragePlugin storagePlugin;
-    private final StoragePluginConfig storagePluginConfig;
+    private final RestStoragePluginConfig storagePluginConfig;
 
     @JsonCreator
     private RestSubScan(@JsonProperty("userName") String userName,
@@ -60,7 +59,7 @@ public class RestSubScan extends AbstractSubScan {
     }
 
     @JsonProperty
-    public StoragePluginConfig getStoragePluginConfig() {
+    public RestStoragePluginConfig getStoragePluginConfig() {
         return storagePluginConfig;
     }
 

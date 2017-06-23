@@ -40,12 +40,12 @@ public final class DecodeFunctionsBody {
         }
 
         public static void eval(ValueHolder source,
-                         ValueHolder output,
-                         DrillBuf buffer) {
-            String encoded = VarCharHelper.asString(source);
+                                ValueHolder output,
+                                DrillBuf buffer) {
+            String encoded = FunctionsHelper.asString(source);
             try {
                 String decoded = URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
-                VarCharHelper.writeString(decoded, buffer, output);
+                FunctionsHelper.writeString(decoded, buffer, output);
             } catch (UnsupportedEncodingException e) {
                 throw new DrillRuntimeException(e);
             }
@@ -59,9 +59,9 @@ public final class DecodeFunctionsBody {
         public static void eval(ValueHolder source,
                                 ValueHolder output,
                                 DrillBuf buffer) {
-            String encoded = VarCharHelper.asString(source);
+            String encoded = FunctionsHelper.asString(source);
             String decoded = StringEscapeUtils.unescapeHtml4(encoded);
-            VarCharHelper.writeString(decoded, buffer, output);
+            FunctionsHelper.writeString(decoded, buffer, output);
         }
     }
 }

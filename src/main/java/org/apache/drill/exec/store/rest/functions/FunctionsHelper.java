@@ -19,35 +19,52 @@ package org.apache.drill.exec.store.rest.functions;
 
 import com.google.common.base.Charsets;
 import io.netty.buffer.DrillBuf;
+import org.apache.commons.io.IOUtils;
 import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.expr.holders.*;
+import org.apache.drill.exec.store.rest.read.XmlRestRecordReader;
+
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+import java.io.InputStream;
+import java.io.StringWriter;
 
 /**
  * @author Oleg Zinoviev
  * @since 22.06.2017.
  */
-final class VarCharHelper {
-    private VarCharHelper() {
+public final class FunctionsHelper {
+    private FunctionsHelper() {
     }
 
     static String asString(ValueHolder source) {
-        String html;
+        String result;
         if (source instanceof VarCharHolder) {
             VarCharHolder vch = (VarCharHolder) source;
-            html = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
+            result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVarCharHolder) {
             NullableVarCharHolder vch = (NullableVarCharHolder) source;
-            html = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
+            result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof Var16CharHolder) {
             Var16CharHolder vch = (Var16CharHolder) source;
-            html = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
+            result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVar16CharHolder) {
             NullableVar16CharHolder vch = (NullableVar16CharHolder) source;
-            html = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
+            result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
+        } else if (source instanceof VarBinaryHolder) {
+            VarBinaryHolder vch = (VarBinaryHolder) source;
+            result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
+        } else if (source instanceof NullableVarBinaryHolder) {
+            NullableVarBinaryHolder vch = (NullableVarBinaryHolder) source;
+            result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else {
             throw new RuntimeException("Unsupported type");
         }
-        return html;
+        return result;
     }
 
     static void writeString(String value, DrillBuf buffer, ValueHolder output) {
@@ -75,8 +92,43 @@ final class VarCharHelper {
             vch.buffer = buffer;
             vch.start = 0;
             vch.end = strBytes.length;
+        } else if (output instanceof VarBinaryHolder) {
+            VarBinaryHolder vch = (VarBinaryHolder) output;
+            vch.buffer = buffer;
+            vch.start = 0;
+            vch.end = strBytes.length;
+        } else if (output instanceof NullableVarBinaryHolder) {
+            NullableVarBinaryHolder vch = (NullableVarBinaryHolder) output;
+            vch.buffer = buffer;
+            vch.start = 0;
+            vch.end = strBytes.length;
         } else {
             throw new RuntimeException("Unknown output type");
         }
+    }
+
+    public static String removeNamespaces(String source) {
+        InputStream stream = IOUtils.toInputStream(source, org.apache.commons.io.Charsets.UTF_8);
+        try {
+
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader == null) {
+                classLoader = XmlRestRecordReader.class.getClassLoader();
+            }
+
+            TransformerFactory factory = TransformerFactory.newInstance();
+            Source xslt = new StreamSource(classLoader.getResourceAsStream("remove-namespaces.xslt"));
+            Transformer transformer = factory.newTransformer(xslt);
+
+            Source text = new StreamSource(stream);
+            StringWriter result = new StringWriter();
+            transformer.transform(text, new StreamResult(result));
+            return result.toString();
+        } catch (TransformerException e) {
+            throw new RuntimeException(e);
+        } finally {
+            IOUtils.closeQuietly(stream);
+        }
+
     }
 }

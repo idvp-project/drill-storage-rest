@@ -59,8 +59,8 @@ public final class SelectorFunctionsBody {
                                 ValueHolder selector,
                                 BaseWriter.ComplexWriter output,
                                 DrillBuf buffer) {
-            String html = VarCharHelper.asString(source);
-            String localSelector = VarCharHelper.asString(selector);
+            String html = FunctionsHelper.asString(source);
+            String localSelector = FunctionsHelper.asString(selector);
             Document parse = Jsoup.parse(html);
             Elements elements = parse.select(localSelector);
             BaseWriter.ListWriter listWriter = output.rootAsList();
@@ -85,8 +85,8 @@ public final class SelectorFunctionsBody {
                                 BaseWriter.ComplexWriter output,
                                 DrillBuf buffer) {
             try {
-                String xml = VarCharHelper.asString(source);
-                String localSelector = VarCharHelper.asString(selector);
+                String xml = FunctionsHelper.asString(source);
+                String localSelector = FunctionsHelper.asString(selector);
 
                 InputStream stream = IOUtils.toInputStream(xml, StandardCharsets.UTF_8);
 
