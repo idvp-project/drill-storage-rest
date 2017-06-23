@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.read;
 
+import com.google.common.base.Stopwatch;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
@@ -38,6 +39,7 @@ import org.apache.http.util.EntityUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Oleg Zinoviev
@@ -54,6 +56,7 @@ public final class GenericRestRecordReader extends AbstractRecordReader {
 
     private VectorContainerWriter writer;
     private boolean read = false;
+    private OperatorContext operatorContext;
 
     public GenericRestRecordReader(FragmentContext fragmentContext,
                                    RestSubScan scan,
@@ -66,6 +69,7 @@ public final class GenericRestRecordReader extends AbstractRecordReader {
 
     @Override
     public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
+        this.operatorContext = operatorContext;
         try{
             this.writer = new VectorContainerWriter(output, false);
         }catch(final Exception e){
@@ -82,6 +86,7 @@ public final class GenericRestRecordReader extends AbstractRecordReader {
             return recordCount;
         }
 
+        Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             String text = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
             if (StringUtils.isNotEmpty(text)) {
@@ -117,6 +122,8 @@ public final class GenericRestRecordReader extends AbstractRecordReader {
         } catch (Exception e) {
             handleAndRaise(e);
         } finally {
+            operatorContext.getStats().addLongStat(RestMetric.TIME_RESULT_SCAN, stopwatch.stop().elapsed(TimeUnit.MILLISECONDS));
+            operatorContext.getStats().addLongStat(RestMetric.TOTAL_SCAN, 1L);
             read = true;
         }
 

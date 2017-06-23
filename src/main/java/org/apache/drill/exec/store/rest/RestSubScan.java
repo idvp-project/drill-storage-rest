@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.*;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.physical.base.AbstractSubScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 
 import java.io.IOException;
@@ -63,8 +64,9 @@ public class RestSubScan extends AbstractSubScan {
         return storagePluginConfig;
     }
 
+    @Override
     public int getOperatorType() {
-        return -1;
+        return UserBitShared.CoreOperatorType.DIRECT_SUB_SCAN_VALUE;
     }
 
     @JsonIgnore

@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.read;
 
+import com.google.common.base.Stopwatch;
 import org.apache.commons.io.Charsets;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.store.rest.RestSubScan;
@@ -28,6 +29,7 @@ import org.json.XML;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Oleg Zinoviev
@@ -42,11 +44,16 @@ public final class XmlRestRecordReader extends JsonRestRecordReader {
 
     @Override
     void setupParser() throws IOException {
-        String xml = EntityUtils.toString(response.getEntity(), Charsets.UTF_8);
-        String result = FunctionsHelper.removeNamespaces(xml);
-        JSONObject xmlJSONObj = XML.toJSONObject(result);
-        String json = xmlJSONObj.toString();
-        jsonReader.setSource(new ByteArrayInputStream(json.getBytes(Charsets.UTF_8)));
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        try {
+            String xml = EntityUtils.toString(response.getEntity(), Charsets.UTF_8);
+            String result = FunctionsHelper.removeNamespaces(xml);
+            JSONObject xmlJSONObj = XML.toJSONObject(result);
+            String json = xmlJSONObj.toString();
+            jsonReader.setSource(new ByteArrayInputStream(json.getBytes(Charsets.UTF_8)));
+        } finally {
+            operatorContext.getStats().addLongStat(RestMetric.TIME_XML_TRANSFORM, stopwatch.stop().elapsed(TimeUnit.MILLISECONDS));
+        }
 
     }
 

@@ -17,8 +17,10 @@
  */
 package org.apache.drill.exec.store.rest;
 
+import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.physical.impl.BatchCreator;
 import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.CloseableRecordBatch;
@@ -27,6 +29,7 @@ import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
 import org.apache.drill.exec.store.rest.read.GenericRestRecordReader;
 import org.apache.drill.exec.store.rest.read.JsonRestRecordReader;
+import org.apache.drill.exec.store.rest.read.RestMetric;
 import org.apache.drill.exec.store.rest.read.XmlRestRecordReader;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -40,6 +43,7 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Oleg Zinoviev
@@ -64,12 +68,19 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
             IOException,
             ExecutionSetupException {
 
+        OperatorContext operatorContext = context.newOperatorContext(scan);
+
         RuntimeQueryConfig config = scan.getStoragePluginConfig().getRuntimeConfig(scan.getSpec().getQuery());
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
 
         CloseableHttpClient client = RestClientProvider.INSTANCE.getClient(scan.getStoragePlugin());
         HttpUriRequest request = RestClientProvider.INSTANCE.createRequest(config, scan.getSpec());
         CloseableHttpResponse response = client.execute(request);
         handleResponseStatus(response);
+
+        long requestTime = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+        operatorContext.getStats().addLongStat(RestMetric.TIME_REQUEST, requestTime);
 
         ContentType contentType = ContentType.TEXT_PLAIN;
         if (!config.isIgnoreContentType()) {
@@ -88,7 +99,7 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
             reader = new GenericRestRecordReader(context, scan, response);
         }
 
-        return new ScanBatch(scan, context, Collections.singleton(reader).iterator());
+        return new ScanBatch(scan, context, operatorContext, Collections.singleton(reader).iterator(), Collections.emptyList());
     }
 
     private void handleResponseStatus(CloseableHttpResponse response) throws ExecutionSetupException {

@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.rest.read;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ExecConstants;
@@ -36,6 +37,7 @@ import org.apache.http.client.utils.HttpClientUtils;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROWS_PER_BATCH;
 
@@ -56,6 +58,9 @@ public class JsonRestRecordReader extends AbstractRecordReader {
     JsonProcessor jsonReader;
     private VectorContainerWriter writer;
     private JsonProcessor.ReadState write = null;
+    private long totalScanTime = 0L;
+    private long totalScanRecords = 0;
+    OperatorContext operatorContext;
 
     public JsonRestRecordReader(FragmentContext fragmentContext,
                                 RestSubScan scan,
@@ -72,6 +77,7 @@ public class JsonRestRecordReader extends AbstractRecordReader {
 
     @Override
     public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
+        this.operatorContext = operatorContext;
         try{
             this.writer = new VectorContainerWriter(output, unionEnabled);
             if (isSkipQuery()) {
@@ -115,35 +121,47 @@ public class JsonRestRecordReader extends AbstractRecordReader {
 
     @Override
     public int next() {
-        writer.allocate();
-        writer.reset();
+        Stopwatch stopwatch = Stopwatch.createStarted();
         int recordCount = 0;
-        if(write == JsonProcessor.ReadState.JSON_RECORD_PARSE_EOF_ERROR){
-            return recordCount;
-        }
-
-        while (recordCount < DEFAULT_ROWS_PER_BATCH) {
-            try {
-                writer.setPosition(recordCount);
-                write = jsonReader.write(writer);
-                if (write == JsonProcessor.ReadState.WRITE_SUCCEED) {
-                    recordCount++;
-                } else if (write == JsonProcessor.ReadState.JSON_RECORD_PARSE_ERROR || write == JsonProcessor.ReadState.JSON_RECORD_PARSE_EOF_ERROR) {
-                    handleAndRaise(new Exception(scan.getSpec().getQuery() + " : line nos :" + (recordCount + 1)));
-                } else {
-                    break;
-                }
-            } catch (IOException ex) {
-                handleAndRaise(ex);
+        try {
+            writer.allocate();
+            writer.reset();
+            if (write == JsonProcessor.ReadState.JSON_RECORD_PARSE_EOF_ERROR) {
+                return recordCount;
             }
+
+            while (recordCount < DEFAULT_ROWS_PER_BATCH) {
+                try {
+                    writer.setPosition(recordCount);
+                    write = jsonReader.write(writer);
+                    if (write == JsonProcessor.ReadState.WRITE_SUCCEED) {
+                        recordCount++;
+                    } else if (write == JsonProcessor.ReadState.JSON_RECORD_PARSE_ERROR || write == JsonProcessor.ReadState.JSON_RECORD_PARSE_EOF_ERROR) {
+                        handleAndRaise(new Exception(scan.getSpec().getQuery() + " : line nos :" + (recordCount + 1)));
+                    } else {
+                        break;
+                    }
+                } catch (IOException ex) {
+                    handleAndRaise(ex);
+                }
+            }
+            jsonReader.ensureAtLeastOneField(writer);
+            writer.setValueCount(recordCount);
+            return recordCount;
+        } finally {
+            totalScanTime += stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+            totalScanRecords += recordCount;
         }
-        jsonReader.ensureAtLeastOneField(writer);
-        writer.setValueCount(recordCount);
-        return recordCount;
+    }
+
+    private void updateStats() {
+        operatorContext.getStats().addLongStat(RestMetric.TIME_RESULT_SCAN, totalScanTime);
+        operatorContext.getStats().addLongStat(RestMetric.TOTAL_SCAN, totalScanRecords);
     }
 
     @Override
     public void close() throws Exception {
+        updateStats();
         HttpClientUtils.closeQuietly(response);
         writer.close();
     }
