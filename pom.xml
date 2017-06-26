@@ -65,7 +65,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.5.1</version>
                 <configuration>
                     <target>1.8</target>
                     <source>1.8</source>
@@ -74,15 +73,25 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>2.4</version>
+                <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>attach-sources</id>
-                        <phase>package</phase>
+                        <id>copy-java-sources</id>
+                        <phase>process-sources</phase>
                         <goals>
-                            <goal>jar-no-fork</goal>
+                            <goal>copy-resources</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/classes/org/apache/drill/exec/store/rest/functions</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/java/org/apache/drill/exec/store/rest/functions</directory>
+                                    <includes>
+                                        <include>**/*Functions.java</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

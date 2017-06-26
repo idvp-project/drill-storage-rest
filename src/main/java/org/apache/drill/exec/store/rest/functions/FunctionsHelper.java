@@ -22,7 +22,6 @@ import io.netty.buffer.DrillBuf;
 import org.apache.commons.io.IOUtils;
 import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.expr.holders.*;
-import org.apache.drill.exec.store.rest.read.XmlRestRecordReader;
 
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
@@ -113,7 +112,7 @@ public final class FunctionsHelper {
 
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             if (classLoader == null) {
-                classLoader = XmlRestRecordReader.class.getClassLoader();
+                classLoader = FunctionsHelper.class.getClassLoader();
             }
 
             TransformerFactory factory = TransformerFactory.newInstance();
