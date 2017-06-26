@@ -60,6 +60,45 @@
 
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>shaded</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactSet>
+                                        <includes>
+                                            <include>org.apache.httpcomponents:httpclient</include>
+                                            <include>org.apache.httpcomponents:httpcore</include>
+                                            <include>org.jsoup:jsoup</include>
+                                            <include>org.json:json</include>
+                                        </includes>
+                                        <excludes>
+                                            <exclude>com.google.code.gson:gson</exclude>
+                                        </excludes>
+                                    </artifactSet>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
