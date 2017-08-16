@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.store.rest;
 
-import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
@@ -59,8 +58,6 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
         OperatorContext operatorContext = context.newOperatorContext(scan);
 
         RuntimeQueryConfig config = scan.getStoragePluginConfig().getRuntimeConfig(scan.getSpec().getQuery());
-
-        Stopwatch stopwatch = Stopwatch.createStarted();
 
         RecordReader reader = new RestRecordReader(context, scan, new RequestHandler(config));
 
