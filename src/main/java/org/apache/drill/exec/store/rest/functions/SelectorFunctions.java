@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
+import com.google.common.base.Charsets;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -25,6 +26,8 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.Var16CharHolder;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.jsoup.nodes.Element;
 
 import javax.inject.Inject;
 
@@ -61,7 +64,14 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.DOMSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
+            listWriter.startList();
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.DOMSelectorFuncBody.eval(source, selector)) {
+                buffer = buffer.reallocIfNeeded(bytes.length);
+                buffer.setBytes(0, bytes);
+                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
+            }
+            listWriter.endList();
         }
     }
 
@@ -89,7 +99,14 @@ public class SelectorFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.XPathSelectorFuncBody.eval(source, selector, output, buffer);
+            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
+            listWriter.startList();
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.XPathSelectorFuncBody.eval(source, selector)) {
+                buffer = buffer.reallocIfNeeded(bytes.length);
+                buffer.setBytes(0, bytes);
+                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
+            }
+            listWriter.endList();
         }
     }
 }

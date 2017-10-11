@@ -38,8 +38,7 @@ public class DecodeFunctions {
 
     @FunctionTemplate(name = "decode_URL",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
-            isRandom = true)
+            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
     public static class UrlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
@@ -57,14 +56,22 @@ public class DecodeFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source, output, buffer);
+            String result = org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source);
+            byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
+            output.start = 0;
+            output.end = bytes.length;
+
+            for(int id = 0; id < bytes.length; ++id) {
+                byte currentByte = bytes[id];
+                output.buffer.setByte(id, currentByte);
+            }
         }
     }
 
     @FunctionTemplate(name = "decode_XML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
-            isRandom = true)
+            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
     public static class XmlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
@@ -82,7 +89,16 @@ public class DecodeFunctions {
 
         @Override
         public void eval() {
-            org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source, output, buffer);
+            String result = org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source);
+            byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
+            output.start = 0;
+            output.end = bytes.length;
+
+            for(int id = 0; id < bytes.length; ++id) {
+                byte currentByte = bytes[id];
+                output.buffer.setByte(id, currentByte);
+            }
         }
     }
 

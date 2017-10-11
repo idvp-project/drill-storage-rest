@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.rest.functions;
 import com.google.common.base.Charsets;
 import io.netty.buffer.DrillBuf;
 import org.apache.commons.io.IOUtils;
+import org.apache.drill.common.exceptions.DrillException;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
@@ -41,6 +42,7 @@ import javax.xml.xpath.*;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 
 /**
  * @author Oleg Zinoviev
@@ -55,24 +57,26 @@ public final class SelectorFunctionsBody {
         private DOMSelectorFuncBody() {
         }
 
-        public static void eval(ValueHolder source,
-                                ValueHolder selector,
-                                BaseWriter.ComplexWriter output,
-                                DrillBuf buffer) {
+        public static Iterable<byte[]> eval(ValueHolder source,
+                                            ValueHolder selector) {
             String html = FunctionsHelper.asString(source);
             String localSelector = FunctionsHelper.asString(selector);
             Document parse = Jsoup.parse(html);
             Elements elements = parse.select(localSelector);
-            BaseWriter.ListWriter listWriter = output.rootAsList();
-            listWriter.startList();
-            for (Element element : elements) {
-                String inner = element.html();
-                final byte[] strBytes = inner.getBytes(Charsets.UTF_8);
-                buffer = buffer.reallocIfNeeded(strBytes.length);
-                buffer.setBytes(0, strBytes);
-                listWriter.varChar().writeVarChar(0, strBytes.length, buffer);
-            }
-            listWriter.endList();
+            Iterator<Element> iterator = elements.iterator();
+            return () -> new Iterator<byte[]>() {
+
+                @Override
+                public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+
+                @Override
+                public byte[] next() {
+                    String inner = iterator.next().html();
+                    return inner.getBytes(Charsets.UTF_8);
+                }
+            };
         }
     }
 
@@ -80,10 +84,8 @@ public final class SelectorFunctionsBody {
         private XPathSelectorFuncBody() {
         }
 
-        public static void eval(ValueHolder source,
-                                ValueHolder selector,
-                                BaseWriter.ComplexWriter output,
-                                DrillBuf buffer) {
+        public static Iterable<byte[]> eval(ValueHolder source,
+                                            ValueHolder selector) {
             try {
                 String xml = FunctionsHelper.asString(source);
                 String localSelector = FunctionsHelper.asString(selector);
@@ -99,20 +101,33 @@ public final class SelectorFunctionsBody {
                     Transformer transformer = TransformerFactory.newInstance().newTransformer();
                     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 
-                    BaseWriter.ListWriter listWriter = output.rootAsList();
-                    listWriter.startList();
-                    for (int i = 0; i < elements.getLength(); i++) {
-                        Node element = elements.item(i);
-                        StringWriter writer = new StringWriter();
-                        transformer.transform(new DOMSource(element), new StreamResult(writer));
 
-                        String inner = writer.toString();
-                        final byte[] strBytes = inner.getBytes(Charsets.UTF_8);
-                        buffer = buffer.reallocIfNeeded(strBytes.length);
-                        buffer.setBytes(0, strBytes);
-                        listWriter.varChar().writeVarChar(0, strBytes.length, buffer);
-                    }
-                    listWriter.endList();
+                    return () -> new Iterator<byte[]>() {
+
+                        private int current = 0;
+
+                        @Override
+                        public boolean hasNext() {
+                            return current < elements.getLength() ;
+                        }
+
+                        @Override
+                        public byte[] next() {
+                            Node element = elements.item(current);
+                            current++;
+
+                            StringWriter writer = new StringWriter();
+                            try {
+                                transformer.transform(new DOMSource(element), new StreamResult(writer));
+                            } catch (TransformerException e) {
+                                throw new DrillRuntimeException(e);
+                            }
+
+                            String inner = writer.toString();
+                            return inner.getBytes(Charsets.UTF_8);
+
+                        }
+                    };
                 } finally {
                     IOUtils.closeQuietly(stream);
                 }

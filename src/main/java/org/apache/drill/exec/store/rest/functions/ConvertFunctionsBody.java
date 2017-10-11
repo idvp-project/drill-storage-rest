@@ -39,22 +39,13 @@ public final class ConvertFunctionsBody {
         private ConvertFromXmlFuncBody() {
         }
 
-        public static void eval(ValueHolder source,
-                                BaseWriter.ComplexWriter output,
-                                DrillBuf buffer) {
+        public static String eval(ValueHolder source) {
             String xml = FunctionsHelper.asString(source);
             String result = FunctionsHelper.removeNamespaces(xml);
 
             JSONObject xmlJSONObj = XML.toJSONObject(result);
-            String json = xmlJSONObj.toString();
+            return xmlJSONObj.toString();
 
-            JsonReader jsonReader = new JsonReader(buffer, false, false, false);
-            try {
-                jsonReader.setSource(json);
-                jsonReader.write(output);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 

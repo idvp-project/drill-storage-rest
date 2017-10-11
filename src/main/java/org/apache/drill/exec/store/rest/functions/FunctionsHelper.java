@@ -66,46 +66,6 @@ public final class FunctionsHelper {
         return result;
     }
 
-    static void writeString(String value, DrillBuf buffer, ValueHolder output) {
-        final byte[] strBytes = value.getBytes(Charsets.UTF_8);
-        buffer = buffer.reallocIfNeeded(strBytes.length);
-        buffer.setBytes(0, strBytes);
-
-        if (output instanceof VarCharHolder) {
-            VarCharHolder vch = (VarCharHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else if (output instanceof NullableVarCharHolder) {
-            NullableVarCharHolder vch = (NullableVarCharHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else if (output instanceof Var16CharHolder) {
-            Var16CharHolder vch = (Var16CharHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else if (output instanceof NullableVar16CharHolder) {
-            NullableVar16CharHolder vch = (NullableVar16CharHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else if (output instanceof VarBinaryHolder) {
-            VarBinaryHolder vch = (VarBinaryHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else if (output instanceof NullableVarBinaryHolder) {
-            NullableVarBinaryHolder vch = (NullableVarBinaryHolder) output;
-            vch.buffer = buffer;
-            vch.start = 0;
-            vch.end = strBytes.length;
-        } else {
-            throw new RuntimeException("Unknown output type");
-        }
-    }
-
     public static String removeNamespaces(String source) {
         InputStream stream = IOUtils.toInputStream(source, org.apache.commons.io.Charsets.UTF_8);
         try {
