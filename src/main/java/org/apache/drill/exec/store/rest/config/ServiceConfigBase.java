@@ -30,14 +30,11 @@ import java.util.Map;
 public abstract class ServiceConfigBase {
     final String url;
     final Map<String, String> headers;
-    final Map<String, Object> config;
 
     ServiceConfigBase(String url,
-                      Map<String, String> headers,
-                      Map<String, Object> config) {
+                      Map<String, String> headers) {
         this.url = Preconditions.checkNotNull(url, "url cannot be null");
         this.headers = headers == null ? Collections.emptyMap() : headers;
-        this.config = config == null ? Collections.emptyMap() : config;
     }
 
     @JsonProperty
@@ -49,10 +46,4 @@ public abstract class ServiceConfigBase {
     public Map<String, String> getHeaders() {
         return headers;
     }
-
-    @JsonProperty
-    public Map<String, Object> getConfig() {
-        return config;
-    }
-
 }

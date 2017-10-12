@@ -21,9 +21,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
-import java.util.Collections;
-import java.util.Map;
-
 /**
  * @author Oleg Zinoviev
  * @since 15.06.2017.
@@ -33,16 +30,13 @@ import java.util.Map;
 public class RestScanSpec {
 
     private final String query;
-    private final Map<String, Object> parameters;
-    private final FilterPushDown filterPushDown;
+    private final String parameters;
 
     @JsonCreator
     public RestScanSpec(@JsonProperty(value = "query", required = true) final String query,
-                        @JsonProperty(value = "parameters") final Map<String, Object> parameters,
-                        @JsonProperty(value = "filterPushDown") final FilterPushDown filterPushDown) {
+                        @JsonProperty(value = "parameters") final String parameters) {
         this.query = query;
-        this.parameters = parameters == null ? Collections.emptyMap() : Collections.unmodifiableMap(parameters);
-        this.filterPushDown = filterPushDown == null ? FilterPushDown.NONE : filterPushDown;
+        this.parameters = parameters;
     }
 
     @JsonProperty
@@ -51,12 +45,8 @@ public class RestScanSpec {
     }
 
     @JsonProperty
-    public Map<String, Object> getParameters() {
+    public String getParameters() {
         return parameters;
     }
 
-    @JsonProperty
-    public FilterPushDown getFilterPushDown() {
-        return filterPushDown;
-    }
 }

@@ -15,17 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.vector.complex.fn;
+package org.apache.drill.exec.store.rest.helpers;
 
-import io.netty.buffer.DrillBuf;
+import com.github.jknack.handlebars.Handlebars;
+import com.google.common.base.Preconditions;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
+
+import java.io.IOException;
+import java.util.Map;
 
 /**
- * Паблик Мороз, открывающий доступ к WorkingBuffer из других пакетов
  * @author Oleg Zinoviev
- * @since 20.06.2017.
+ * @since 21.06.2017.
  */
-public class WorkingBufferProxy extends WorkingBuffer {
-    public WorkingBufferProxy(DrillBuf workBuf) {
-        super(workBuf);
+public final class HandlebarsHelper {
+
+    private HandlebarsHelper() {
     }
+
+
+    public static String merge(String input, Map<String, Object> parameters) {
+        Preconditions.checkNotNull(input, "input");
+        Preconditions.checkNotNull(input, "parameters");
+
+        Handlebars handlebars = new Handlebars().infiniteLoops(false);
+        try {
+            return handlebars.compileInline(input).apply(parameters);
+        } catch (IOException e) {
+            throw new DrillRuntimeException(e);
+        }
+
+    }
+
 }

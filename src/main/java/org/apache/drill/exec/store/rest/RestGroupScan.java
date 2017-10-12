@@ -28,12 +28,9 @@ import org.apache.drill.exec.physical.base.ScanStats;
 import org.apache.drill.exec.physical.base.SubScan;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.store.StoragePluginRegistry;
-import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
-import org.apache.drill.exec.store.rest.helpers.VelocityHelper;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Oleg Zinoviev
@@ -49,18 +46,16 @@ public class RestGroupScan extends AbstractGroupScan {
     private List<SchemaPath> columns;
     private final RestStoragePlugin storagePlugin;
     private final RestStoragePluginConfig storagePluginConfig;
-    private Set<String> queryParameters;
-    private FilterPushDown filterPushedDown = FilterPushDown.NONE;
+    private final boolean pushedDown;
 
     @JsonCreator
     private RestGroupScan(@JsonProperty("userName") String userName,
                          @JsonProperty("spec") RestScanSpec restScanSpec,
                          @JsonProperty("storagePluginConfig") RestStoragePluginConfig storagePluginConfig,
                          @JsonProperty("columns") List<SchemaPath> columns,
-                         @JsonProperty("filterPushedDown") FilterPushDown filterPushedDown,
+                         @JsonProperty("pushedDown") boolean pushedDown,
                          @JacksonInject StoragePluginRegistry pluginRegistry) throws IOException, ExecutionSetupException {
-        this (userName, (RestStoragePlugin) pluginRegistry.getPlugin(storagePluginConfig), restScanSpec, columns);
-        this.filterPushedDown = filterPushedDown;
+        this (userName, (RestStoragePlugin) pluginRegistry.getPlugin(storagePluginConfig), restScanSpec, columns, pushedDown);
     }
 
     @JsonProperty
@@ -78,12 +73,9 @@ public class RestGroupScan extends AbstractGroupScan {
         return storagePluginConfig;
     }
 
-    @JsonIgnore
-    public Set<String> getQueryParameters() {
-        if (queryParameters == null) {
-            queryParameters = getQueryParameters(spec);
-        }
-        return queryParameters;
+    @JsonProperty
+    public boolean isPushedDown() {
+        return pushedDown;
     }
 
     @JsonIgnore
@@ -91,31 +83,17 @@ public class RestGroupScan extends AbstractGroupScan {
         return storagePlugin;
     }
 
-    @JsonProperty
-    public FilterPushDown getFilterPushedDown() {
-        if (filterPushedDown == null) {
-            filterPushedDown = FilterPushDown.NONE;
-        }
-        return filterPushedDown;
-    }
-
-    public void setFilterPushedDown(FilterPushDown filterPushedDown) {
-        this.filterPushedDown = filterPushedDown;
-    }
-
-    public RestGroupScan(String userName, RestStoragePlugin plugin, RestScanSpec spec, List<SchemaPath> columns) {
+    public RestGroupScan(String userName,
+                         RestStoragePlugin plugin,
+                         RestScanSpec spec,
+                         List<SchemaPath> columns,
+                         boolean pushedDown) {
         super(userName);
         this.storagePlugin = plugin;
         this.storagePluginConfig = storagePlugin.getConfig();
         this.spec = spec;
         this.columns = columns == null ? ALL_COLUMNS : columns;
-        this.queryParameters = getQueryParameters(spec);
-    }
-
-    private Set<String> getQueryParameters(RestScanSpec spec) {
-        String query = Preconditions.checkNotNull(spec.getQuery());
-        RuntimeQueryConfig config = storagePluginConfig.getRuntimeConfig(query);
-        return VelocityHelper.INSTANCE.parameters(config);
+        this.pushedDown = pushedDown;
     }
 
     public RestGroupScan(RestGroupScan that) {
@@ -124,8 +102,7 @@ public class RestGroupScan extends AbstractGroupScan {
         this.storagePluginConfig = that.storagePluginConfig;
         this.spec = that.spec;
         this.columns = that.columns;
-        this.queryParameters = that.queryParameters;
-        this.filterPushedDown = that.filterPushedDown;
+        this.pushedDown = that.pushedDown;
     }
 
     @Override
@@ -176,7 +153,7 @@ public class RestGroupScan extends AbstractGroupScan {
 
     @Override
     public ScanStats getScanStats() {
-        if (getFilterPushedDown() != FilterPushDown.NONE) {
+        if (pushedDown) {
             return ScanStats.TRIVIAL_TABLE;
         }
         return HUGE_TABLE;

@@ -17,11 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.config;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author Oleg Zinoviev
@@ -29,41 +25,18 @@ import java.util.Objects;
  */
 public final class RuntimeQueryConfig extends QueryConfig {
 
-    private final static Logger logger = LoggerFactory.getLogger(RuntimeQueryConfig.class);
-
     private final String baseUrl;
 
     RuntimeQueryConfig(String url,
                        String baseUrl,
                        Map<String, String> headers,
                        HttpMethod method,
-                       String body,
-                       Map<String, Object> config) {
-        super(url, headers, method, body, config);
+                       String body) {
+        super(url, headers, method, body);
         this.baseUrl = baseUrl;
     }
 
     public String getBaseUrl() {
         return baseUrl;
-    }
-
-    public boolean isIgnoreContentType() {
-        if (config.containsKey("ignore.content.type")) {
-            Object value = config.get("ignore.content.type");
-            if (value instanceof Boolean) {
-                return (Boolean) value;
-            }
-            try {
-                if (value instanceof String) {
-                    return Boolean.parseBoolean((String) value);
-                } else {
-                    logger.error("ignore.content.type value " + Objects.toString(value) + " not supported");
-                }
-            } catch (Exception e) {
-                logger.error("ignore.content.type value " + Objects.toString(value) + " not supported", e);
-            }
-
-        }
-        return false;
     }
 }

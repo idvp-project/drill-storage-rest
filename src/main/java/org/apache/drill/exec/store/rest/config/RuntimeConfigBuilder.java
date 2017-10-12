@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.rest.config;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.exec.store.rest.RestStoragePluginConfig;
 
 import java.util.HashMap;
@@ -49,15 +50,18 @@ public final class RuntimeConfigBuilder {
         String url = query;
         HttpMethod method = HttpMethod.GET;
         Map<String, String> headersBuilder = new HashMap<>(config.getHeaders());
-        Map<String, Object> configBuilder = new HashMap<>(config.getConfig());
         String body  = null;
 
-        QueryConfig existingConfig = config.getQueries().get(query);
+        QueryConfig existingConfig = config.getQueries().entrySet()
+                .stream()
+                .filter(e -> StringUtils.equalsIgnoreCase(e.getKey(), query))
+                .findFirst()
+                .map(Map.Entry::getValue)
+                .orElse(null);
         if (existingConfig != null) {
             url = existingConfig.getUrl();
             method = existingConfig.getMethod();
             headersBuilder.putAll(existingConfig.getHeaders());
-            configBuilder.putAll(existingConfig.getConfig());
             body = existingConfig.getBody();
         }
 
@@ -65,8 +69,7 @@ public final class RuntimeConfigBuilder {
                 config.getUrl(),
                 headersBuilder,
                 method,
-                body,
-                configBuilder);
+                body);
     }
 
 }

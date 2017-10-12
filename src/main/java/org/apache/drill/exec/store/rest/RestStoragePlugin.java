@@ -60,6 +60,10 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
         return config;
     }
 
+    public String getRequestParameters() {
+        return String.format("$__%s_param", name);
+    }
+
     @Override
     public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus schemaPlus) throws IOException {
         schemaFactory.registerSchemas(schemaConfig, schemaPlus);
@@ -69,7 +73,7 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
     public AbstractGroupScan getPhysicalScan(String userName, JSONOptions selection, List<SchemaPath> columns) throws IOException {
         RestScanSpec scanSpec = selection.getListWith(new ObjectMapper(), new TypeReference<RestScanSpec>() {
         });
-        return new RestGroupScan(userName, this, scanSpec, columns);
+        return new RestGroupScan(userName, this, scanSpec, columns, scanSpec.getParameters() != null);
     }
 
     @SuppressWarnings("deprecation")
@@ -78,7 +82,4 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
         return ImmutableSet.of(RestPushFilterIntoScan.FILTER_ON_SCAN);
     }
 
-    String getName() {
-        return name;
-    }
 }

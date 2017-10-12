@@ -15,26 +15,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.rest.config;
 
-import org.codehaus.jackson.annotate.JsonValue;
+package org.apache.drill.exec.store.rest.query;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * @author Oleg Zinoviev
- * @since 21.06.2017.
- */
-public enum HttpMethod {
-    GET("get"),
-    POST("post");
+ * @since 12.10.2017
+ **/
+public final class ParameterValue {
 
-    private final String value;
+    private final Type type;
+    private final Object value;
 
-    HttpMethod(String value) {
+    @JsonCreator
+    public ParameterValue(
+            @JsonProperty(value = "type", required = true) Type type,
+            @JsonProperty(value = "value") Object value) {
+
+        this.type = type;
         this.value = value;
     }
 
-    @JsonValue
-    public String value() {
+    public Type getType() {
+        return type;
+    }
+
+    public Object getValue() {
         return value;
     }
+
+    public enum Type {
+        QUERY("query"),
+        VALUE("value");
+
+        private final String value;
+
+        Type(String value) {
+            this.value = value;
+        }
+
+        @JsonValue
+        public String getValue() {
+            return value;
+        }
+    }
+
 }

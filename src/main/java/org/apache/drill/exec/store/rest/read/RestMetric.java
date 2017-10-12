@@ -24,10 +24,11 @@ import org.apache.drill.exec.ops.MetricDef;
  * @since 23.06.2017.
  */
 public enum RestMetric implements MetricDef {
+    TIME_SUBQUERIES,
     TIME_REQUEST,
     TIME_RESULT_SCAN,
+    TIME_JSON_TRANSFORM,
     TIME_XML_TRANSFORM,
-    TIME_TEXT_TRANSFORM,
     TOTAL_SCAN;
 
     @Override

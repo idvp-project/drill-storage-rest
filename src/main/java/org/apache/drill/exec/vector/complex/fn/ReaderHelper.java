@@ -27,11 +27,11 @@ import java.io.IOException;
  * @author Oleg Zinoviev
  * @since 21.06.2017.
  */
-public final class ReaderHelper {
+final class ReaderHelper {
     private ReaderHelper() {
     }
 
-    public static void write(BaseWriter.MapWriter mapWriter, String field, Object value, WorkingBuffer buffer) throws IOException {
+    static void write(BaseWriter.MapWriter mapWriter, String field, Object value, WorkingBuffer buffer) throws IOException {
         if (value == null) {
             return;
         }

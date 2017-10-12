@@ -70,11 +70,6 @@ public class RestStoragePluginConfig extends StoragePluginConfigBase {
         return queries;
     }
 
-    @JsonProperty
-    public Map<String, Object> getConfig() {
-        return config;
-    }
-
     @JsonIgnore
     RuntimeQueryConfig getRuntimeConfig(String query) {
         return new RuntimeConfigBuilder()

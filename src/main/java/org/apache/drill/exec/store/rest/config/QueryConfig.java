@@ -36,9 +36,8 @@ public class QueryConfig extends ServiceConfigBase {
     public QueryConfig(@JsonProperty(value = "url", required = true) String url,
                        @JsonProperty(value = "headers") Map<String, String> headers,
                        @JsonProperty(value = "method") HttpMethod method,
-                       @JsonProperty(value = "body") String body,
-                       @JsonProperty(value = "config") Map<String, Object> config) {
-        super(url, headers, config);
+                       @JsonProperty(value = "body") String body) {
+        super(url, headers);
         this.method = method == null ? HttpMethod.GET : method;
         this.body = body;
     }
@@ -62,7 +61,6 @@ public class QueryConfig extends ServiceConfigBase {
         }
         QueryConfig that = (QueryConfig) o;
         return Objects.equals(url, that.url)
-                && Objects.equals(config, that.config)
                 && Objects.equals(headers, that.headers)
                 && Objects.equals(method, that.method)
                 && Objects.equals(body, that.body);
@@ -72,7 +70,6 @@ public class QueryConfig extends ServiceConfigBase {
     public int hashCode() {
         return 56
                 ^ Objects.hashCode(url)
-                ^ Objects.hashCode(config)
                 ^ Objects.hashCode(headers)
                 ^ Objects.hashCode(method)
                 ^ Objects.hashCode(body);
