@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
 import org.apache.drill.common.logical.StoragePluginConfigBase;
 import org.apache.drill.exec.store.rest.config.QueryConfig;
 import org.apache.drill.exec.store.rest.config.RuntimeConfigBuilder;
@@ -45,11 +44,11 @@ public class RestStoragePluginConfig extends StoragePluginConfigBase {
     private final Map<String, QueryConfig> queries;
 
     @JsonCreator
-    public RestStoragePluginConfig(@JsonProperty(value = "url", required = true) String url,
+    public RestStoragePluginConfig(@JsonProperty(value = "url") String url,
                                    @JsonProperty(value = "headers") Map<String, String> headers,
                                    @JsonProperty(value = "queries") Map<String, QueryConfig> queries,
                                    @JsonProperty(value = "config") Map<String, Object> config) {
-        this.url = Preconditions.checkNotNull(url, "url cannot be null");
+        this.url = url;
         this.headers = headers == null ? Collections.emptyMap() : headers;
         this.config = config == null ? Collections.emptyMap() : config;
         this.queries = queries == null ? Collections.emptyMap() : queries;

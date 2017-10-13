@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.rest;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -147,6 +148,7 @@ public final class RequestHandler {
         String localUri = HandlebarsHelper.merge(config.getUrl(), parameters);
         URI scanUri = new URI(localUri);
         if (!scanUri.isAbsolute()) {
+            Preconditions.checkNotNull(config.getBaseUrl(), "config.baseUrl");
             String baseUri = HandlebarsHelper.merge(config.getBaseUrl(), parameters);
             scanUri = new URI(baseUri).resolve(scanUri);
         }
