@@ -56,7 +56,7 @@ public class ConvertFunctions {
 
         @Override
         public void setup() {
-            this.jsonReader = new org.apache.drill.exec.vector.complex.fn.JsonReader(buffer, false, false, false);
+            jsonReader = new org.apache.drill.exec.vector.complex.fn.JsonReader(buffer, false, false, false);
         }
 
         @Override
