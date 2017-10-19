@@ -17,17 +17,12 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
-import com.google.common.base.Charsets;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
-import org.apache.drill.exec.expr.holders.Var16CharHolder;
-import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
-import org.jsoup.nodes.Element;
 
 import javax.inject.Inject;
 
@@ -47,7 +42,7 @@ public class SelectorFunctions {
     public static class DOMSelectorVarCharFunc implements DrillSimpleFunc {
 
         @Param
-        VarBinaryHolder source;
+        VarCharHolder source;
 
         @Param
         VarCharHolder selector;
@@ -82,7 +77,7 @@ public class SelectorFunctions {
     public static class XPathSelectorVarCharFunc implements DrillSimpleFunc {
 
         @Param
-        VarBinaryHolder source;
+        VarCharHolder source;
 
         @Param
         VarCharHolder selector;

@@ -22,7 +22,6 @@ import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
-import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
@@ -42,7 +41,7 @@ public class DecodeFunctions {
     public static class UrlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
-        VarBinaryHolder source;
+        VarCharHolder source;
 
         @Output
         VarCharHolder output;
@@ -75,7 +74,7 @@ public class DecodeFunctions {
     public static class XmlDecodeVarCharFunc implements DrillSimpleFunc {
 
         @Param
-        VarBinaryHolder source;
+        VarCharHolder source;
 
         @Output
         VarCharHolder output;

@@ -23,7 +23,7 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.annotations.Workspace;
-import org.apache.drill.exec.expr.holders.VarBinaryHolder;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 import javax.inject.Inject;
@@ -43,7 +43,7 @@ public class ConvertFunctions {
     public static class ConvertFromXmlFunc implements DrillSimpleFunc {
 
         @Param
-        VarBinaryHolder source;
+        VarCharHolder source;
 
         @Output
         BaseWriter.ComplexWriter output;
