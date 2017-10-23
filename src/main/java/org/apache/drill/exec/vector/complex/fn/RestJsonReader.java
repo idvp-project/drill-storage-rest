@@ -27,6 +27,7 @@ import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.GroupScan;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.store.easy.json.reader.BaseJsonProcessor;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
@@ -534,7 +535,36 @@ public class RestJsonReader extends BaseJsonProcessor {
                         break;
                     case START_OBJECT:
                         if (!writeListDataIfTyped(list)) {
-                            writeData(list.map(), FieldSelection.ALL_VALID, false);
+                            BaseWriter.MapWriter map = null;
+                            try {
+                                map = list.map();
+                            } catch (UserException e) {
+                                if (!Objects.equals(UserBitShared.DrillPBError.ErrorType.UNSUPPORTED_OPERATION, e.getErrorType())) {
+                                    throw e;
+                                } else {
+                                    logger.error("List mixed type error", e);
+                                }
+                            }
+
+                            if (map != null) {
+                                writeData(map, FieldSelection.ALL_VALID, false);
+                            } else {
+                                //Была ошибка, проматываем контент объекта
+                                int nest = 1;
+                                skip: while (true) {
+                                    switch (parser.nextToken()) {
+                                        case END_OBJECT:
+                                            nest--;
+                                            if (nest <= 0) {
+                                                break skip;
+                                            }
+                                            break;
+                                        case START_OBJECT:
+                                            nest++;
+                                            break;
+                                    }
+                                }
+                            }
                         }
                         break;
                     case END_ARRAY:
@@ -544,11 +574,27 @@ public class RestJsonReader extends BaseJsonProcessor {
 
                     case VALUE_EMBEDDED_OBJECT:
                     case VALUE_FALSE: {
-                        list.bit().writeBit(0);
+                        try {
+                            list.bit().writeBit(0);
+                        } catch (UserException e) {
+                            if (!Objects.equals(UserBitShared.DrillPBError.ErrorType.UNSUPPORTED_OPERATION, e.getErrorType())) {
+                                throw e;
+                            } else {
+                                logger.error("List mixed type error", e);
+                            }
+                        }
                         break;
                     }
                     case VALUE_TRUE: {
-                        list.bit().writeBit(1);
+                        try {
+                            list.bit().writeBit(1);
+                        } catch (UserException e) {
+                            if (!Objects.equals(UserBitShared.DrillPBError.ErrorType.UNSUPPORTED_OPERATION, e.getErrorType())) {
+                                throw e;
+                            } else {
+                                logger.error("List mixed type error", e);
+                            }
+                        }
                         break;
                     }
                     case VALUE_NULL:
@@ -560,13 +606,29 @@ public class RestJsonReader extends BaseJsonProcessor {
                                                 + "Be advised that this will treat JSON null values as a string containing the word 'null'.")
                                 .build(logger);
                     case VALUE_NUMBER_FLOAT:
-                        list.float8().writeFloat8(parser.getDoubleValue());
+                        try {
+                            list.float8().writeFloat8(parser.getDoubleValue());
+                        } catch (UserException e) {
+                            if (!Objects.equals(UserBitShared.DrillPBError.ErrorType.UNSUPPORTED_OPERATION, e.getErrorType())) {
+                                throw e;
+                            } else {
+                                logger.error("List mixed type error", e);
+                            }
+                        }
                         break;
                     case VALUE_NUMBER_INT:
-                        if (this.readNumbersAsDouble) {
-                            list.float8().writeFloat8(parser.getDoubleValue());
-                        } else {
-                            list.bigInt().writeBigInt(parser.getLongValue());
+                        try {
+                            if (this.readNumbersAsDouble) {
+                                list.float8().writeFloat8(parser.getDoubleValue());
+                            } else {
+                                list.bigInt().writeBigInt(parser.getLongValue());
+                            }
+                        } catch (UserException e) {
+                            if (!Objects.equals(UserBitShared.DrillPBError.ErrorType.UNSUPPORTED_OPERATION, e.getErrorType())) {
+                                throw e;
+                            } else {
+                                logger.error("List mixed type error", e);
+                            }
                         }
                         break;
                     case VALUE_STRING:
