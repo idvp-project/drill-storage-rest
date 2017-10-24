@@ -18,12 +18,13 @@
 package org.apache.drill.exec.store.rest.functions;
 
 import com.google.common.base.Charsets;
-import io.netty.buffer.DrillBuf;
+import com.jayway.jsonpath.InvalidPathException;
+import com.jayway.jsonpath.JsonPath;
 import org.apache.commons.io.IOUtils;
-import org.apache.drill.common.exceptions.DrillException;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -39,9 +40,12 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 
 /**
@@ -50,6 +54,10 @@ import java.util.Iterator;
  */
 @SuppressWarnings("WeakerAccess")
 public final class SelectorFunctionsBody {
+
+    static final ObjectMapper mapper = new ObjectMapper();
+    static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SelectorFunctionsBody.class);
+
     private SelectorFunctionsBody() {
     }
 
@@ -133,7 +141,49 @@ public final class SelectorFunctionsBody {
                 }
 
             } catch (XPathExpressionException | TransformerException e) {
-                throw new DrillRuntimeException(e);
+                throw UserException.functionError(e).message("XPathSelectorFuncBody").build(logger);
+            }
+        }
+    }
+
+    public static class JsonPathSelectorFuncBody {
+        private JsonPathSelectorFuncBody() {
+        }
+
+        public static Iterable<byte[]> eval(ValueHolder source,
+                                  ValueHolder selector) {
+            try {
+                String json = FunctionsHelper.asString(source);
+                String localSelector = FunctionsHelper.asString(selector);
+
+                Object result = JsonPath.read(json, localSelector);
+
+                if (result instanceof Collection) {
+                    Iterator<?> iterator = ((Collection<?>) result).iterator();
+                    return () -> new Iterator<byte[]>() {
+
+                        @Override
+                        public boolean hasNext() {
+                            return iterator.hasNext();
+                        }
+
+                        @Override
+                        public byte[] next() {
+                            Object inner = iterator.next();
+                            try {
+                                return mapper.writeValueAsBytes(inner);
+                            } catch (IOException e) {
+                                throw UserException.functionError(e).message("JsonPathSelectorFuncBody").build(logger);
+                            }
+                        }
+                    };
+                } else {
+                    return Collections.singletonList(mapper.writeValueAsBytes(result));
+                }
+
+
+            } catch (InvalidPathException | IOException e) {
+                throw UserException.functionError(e).message("JsonPathSelectorFuncBody").build(logger);
             }
         }
     }

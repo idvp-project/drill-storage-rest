@@ -33,16 +33,11 @@ import org.apache.drill.exec.store.easy.json.JsonProcessor;
 import org.apache.drill.exec.store.easy.json.reader.CountingJsonReader;
 import org.apache.drill.exec.store.rest.RequestHandler;
 import org.apache.drill.exec.store.rest.RestSubScan;
-import org.apache.drill.exec.store.rest.functions.FunctionsHelper;
-import org.apache.drill.exec.vector.complex.fn.RestJsonReader;
+import org.apache.drill.exec.vector.complex.fn.JsonReader;
 import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
-import org.apache.http.entity.ContentType;
-import org.json.JSONObject;
-import org.json.XML;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROWS_PER_BATCH;
@@ -97,7 +92,7 @@ public class RestRecordReader extends AbstractRecordReader {
             if (isSkipQuery()) {
                 this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer());
             } else {
-                this.jsonReader = new RestJsonReader(fragmentContext.getManagedBuffer(),
+                this.jsonReader = new JsonReader(fragmentContext.getManagedBuffer(),
                         enableAllTextMode,
                         true,
                         readNumbersAsDouble);
@@ -116,38 +111,6 @@ public class RestRecordReader extends AbstractRecordReader {
         ObjectNode rootNode = factory.objectNode();
         rootNode.set(CONTENT_COLUMN, factory.textNode(result.getContent()));
         rootNode.set(HEADERS_COLUMN, MAPPER.valueToTree(result.getHeaders()));
-
-        if (result.getContent() != null) {
-
-            ContentType contentType = result.getContentType();
-            if (contentType != null) {
-                if (Objects.equals(result.getContentType().getMimeType(), ContentType.APPLICATION_JSON.getMimeType())) {
-                    Stopwatch stopwatch = Stopwatch.createStarted();
-                    try {
-                        rootNode.set(OBJECT_COLUMN, MAPPER.readTree(result.getContent()));
-                    } catch (Exception e) {
-                        logger.error("Cannot read json", e);
-                    } finally {
-                        operatorContext.getStats().addLongStat(RestMetric.TIME_JSON_TRANSFORM, stopwatch.stop().elapsed(TimeUnit.MILLISECONDS));
-                    }
-                } else if (Objects.equals(contentType.getMimeType(), ContentType.APPLICATION_XML.getMimeType())
-                        || Objects.equals(contentType.getMimeType(), ContentType.TEXT_XML.getMimeType())
-                        || Objects.equals(contentType.getMimeType(), APPLICATION_SOAP_XML)) {
-                    Stopwatch stopwatch = Stopwatch.createStarted();
-                    try {
-                        String clearXml = FunctionsHelper.removeNamespaces(result.getContent());
-                        JSONObject xmlJSONObj = XML.toJSONObject(clearXml);
-                        rootNode.set(OBJECT_COLUMN, MAPPER.readTree(xmlJSONObj.toString()));
-                    } catch (Exception e) {
-                        logger.error("Cannot read xml", e);
-                    } finally {
-                        operatorContext.getStats().addLongStat(RestMetric.TIME_XML_TRANSFORM, stopwatch.stop().elapsed(TimeUnit.MILLISECONDS));
-                    }
-                }
-            }
-        } else {
-            rootNode.set(OBJECT_COLUMN, factory.nullNode());
-        }
 
         jsonReader.setSource(rootNode);
     }
