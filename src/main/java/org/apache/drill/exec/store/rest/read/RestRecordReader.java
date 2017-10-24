@@ -127,7 +127,7 @@ public class RestRecordReader extends AbstractRecordReader {
         }
 
         UserException.Builder exceptionBuilder = UserException.dataReadError(e)
-                .message("%s - %s", "Failure reading JSON", message);
+                .message("Request failure - %s", message);
         if (columnNr > 0) {
             exceptionBuilder.pushContext("Column ", columnNr);
         }

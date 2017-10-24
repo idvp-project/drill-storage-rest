@@ -22,6 +22,7 @@ import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
@@ -35,14 +36,16 @@ public class SelectorFunctions {
     private SelectorFunctions() {
     }
 
-    @FunctionTemplate(name = "selector_CSS",
+    @FunctionTemplate(name = "selector",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
             isRandom = true)
-    public static class DOMSelectorVarCharFunc implements DrillSimpleFunc {
+    public static class SelectorFunc implements DrillSimpleFunc {
+        @Param
+        VarCharHolder type;
 
         @Param
-        VarCharHolder source;
+        NullableVarCharHolder source;
 
         @Param
         VarCharHolder selector;
@@ -61,77 +64,7 @@ public class SelectorFunctions {
         public void eval() {
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
-            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.DOMSelectorFuncBody.eval(source, selector)) {
-                buffer = buffer.reallocIfNeeded(bytes.length);
-                buffer.setBytes(0, bytes);
-                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
-            }
-            listWriter.endList();
-        }
-    }
-
-    @FunctionTemplate(name = "selector_XPath",
-            scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
-            isRandom = true)
-    public static class XPathSelectorVarCharFunc implements DrillSimpleFunc {
-
-        @Param
-        VarCharHolder source;
-
-        @Param
-        VarCharHolder selector;
-
-        @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
-
-        @Inject
-        DrillBuf buffer;
-
-        @Override
-        public void setup() {
-        }
-
-        @Override
-        public void eval() {
-            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
-            listWriter.startList();
-            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.XPathSelectorFuncBody.eval(source, selector)) {
-                buffer = buffer.reallocIfNeeded(bytes.length);
-                buffer.setBytes(0, bytes);
-                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
-            }
-            listWriter.endList();
-        }
-    }
-
-    @FunctionTemplate(name = "selector_jsonPath",
-            scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
-            isRandom = true)
-    public static class JsonPathSelectorVarCharFunc implements DrillSimpleFunc {
-
-        @Param
-        VarCharHolder source;
-
-        @Param
-        VarCharHolder selector;
-
-        @Output
-        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
-
-        @Inject
-        DrillBuf buffer;
-
-        @Override
-        public void setup() {
-        }
-
-        @Override
-        public void eval() {
-            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
-            listWriter.startList();
-            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.JsonPathSelectorFuncBody.eval(source, selector)) {
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.select(type, source, selector)) {
                 buffer = buffer.reallocIfNeeded(bytes.length);
                 buffer.setBytes(0, bytes);
                 listWriter.varChar().writeVarChar(0, bytes.length, buffer);

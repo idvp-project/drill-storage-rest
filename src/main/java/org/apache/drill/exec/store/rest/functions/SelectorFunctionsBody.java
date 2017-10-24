@@ -58,7 +58,32 @@ public final class SelectorFunctionsBody {
     static final ObjectMapper mapper = new ObjectMapper();
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SelectorFunctionsBody.class);
 
+
+
     private SelectorFunctionsBody() {
+    }
+
+    public static Iterable<byte[]> select(ValueHolder typeHolder,
+                                          ValueHolder sourceHolder,
+                                          ValueHolder selectorHolder) {
+
+        String t = FunctionsHelper.asString(typeHolder);
+
+        if ("css".equalsIgnoreCase(t)) {
+            return DOMSelectorFuncBody.eval(sourceHolder, selectorHolder);
+        }
+
+        if ("xPath".equalsIgnoreCase(t)) {
+            return XPathSelectorFuncBody.eval(sourceHolder, selectorHolder);
+        }
+
+        if ("jPath".equalsIgnoreCase(t) || "jsonPath".equalsIgnoreCase(t)) {
+            return JsonPathSelectorFuncBody.eval(sourceHolder, selectorHolder);
+        }
+
+        throw UserException.functionError()
+                .message("Unsupported selector type: %s", t)
+                .build(logger);
     }
 
     public static class DOMSelectorFuncBody {
