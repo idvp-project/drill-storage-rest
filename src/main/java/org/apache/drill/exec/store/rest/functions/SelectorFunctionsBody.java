@@ -20,7 +20,6 @@ package org.apache.drill.exec.store.rest.functions;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
-import org.apache.commons.io.IOUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
@@ -41,9 +40,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.*;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.StringReader;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -123,47 +121,40 @@ public final class SelectorFunctionsBody {
                 String xml = FunctionsHelper.asString(source);
                 String localSelector = FunctionsHelper.asString(selector);
 
-                InputStream stream = IOUtils.toInputStream(xml, StandardCharsets.UTF_8);
+                XPathFactory xPathFactory = XPathFactory.newInstance();
+                XPath xPath = xPathFactory.newXPath();
+                XPathExpression expression = xPath.compile(localSelector);
+                NodeList elements = (NodeList) expression.evaluate(new InputSource(new StringReader(xml)), XPathConstants.NODESET);
 
-                try {
-                    XPathFactory xPathFactory = XPathFactory.newInstance();
-                    XPath xPath = xPathFactory.newXPath();
-                    XPathExpression expression = xPath.compile(localSelector);
-                    NodeList elements = (NodeList) expression.evaluate(new InputSource(stream), XPathConstants.NODESET);
+                Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 
-                    Transformer transformer = TransformerFactory.newInstance().newTransformer();
-                    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+                return () -> new Iterator<byte[]>() {
 
+                    private int current = 0;
 
-                    return () -> new Iterator<byte[]>() {
+                    @Override
+                    public boolean hasNext() {
+                        return current < elements.getLength() ;
+                    }
 
-                        private int current = 0;
+                    @Override
+                    public byte[] next() {
+                        Node element = elements.item(current);
+                        current++;
 
-                        @Override
-                        public boolean hasNext() {
-                            return current < elements.getLength() ;
+                        StringWriter writer = new StringWriter();
+                        try {
+                            transformer.transform(new DOMSource(element), new StreamResult(writer));
+                        } catch (TransformerException e) {
+                            throw new DrillRuntimeException(e);
                         }
 
-                        @Override
-                        public byte[] next() {
-                            Node element = elements.item(current);
-                            current++;
+                        String inner = writer.toString();
+                        return inner.getBytes(Charsets.UTF_8);
 
-                            StringWriter writer = new StringWriter();
-                            try {
-                                transformer.transform(new DOMSource(element), new StreamResult(writer));
-                            } catch (TransformerException e) {
-                                throw new DrillRuntimeException(e);
-                            }
-
-                            String inner = writer.toString();
-                            return inner.getBytes(Charsets.UTF_8);
-
-                        }
-                    };
-                } finally {
-                    IOUtils.closeQuietly(stream);
-                }
+                    }
+                };
 
             } catch (XPathExpressionException | TransformerException e) {
                 throw UserException.functionError(e).message("XPathSelectorFuncBody").build(logger);

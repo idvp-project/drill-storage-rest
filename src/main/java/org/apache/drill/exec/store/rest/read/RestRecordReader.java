@@ -49,9 +49,7 @@ import static org.apache.drill.exec.store.easy.json.JSONRecordReader.DEFAULT_ROW
 public class RestRecordReader extends AbstractRecordReader {
     public static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static final String APPLICATION_SOAP_XML = "application/soap+xml";
     private static final String CONTENT_COLUMN = "content";
-    private static final String OBJECT_COLUMN = "object";
     private static final String HEADERS_COLUMN = "headers";
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RestRecordReader.class);
