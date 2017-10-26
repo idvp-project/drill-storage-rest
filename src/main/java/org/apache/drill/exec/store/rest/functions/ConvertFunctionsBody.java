@@ -17,14 +17,9 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
-import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.vector.complex.fn.JsonReader;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.json.JSONObject;
 import org.json.XML;
-
-import java.io.IOException;
 
 /**
  * @author Oleg Zinoviev
@@ -43,9 +38,8 @@ public final class ConvertFunctionsBody {
             String xml = FunctionsHelper.asString(source);
             String result = FunctionsHelper.removeNamespaces(xml);
 
-            JSONObject xmlJSONObj = XML.toJSONObject(result);
+            JSONObject xmlJSONObj = XML.toJSONObject(result, true);
             return xmlJSONObj.toString();
-
         }
     }
 
