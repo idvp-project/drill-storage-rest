@@ -67,7 +67,7 @@ public class ConvertFunctions {
                 jsonReader.write(output);
                 buffer = jsonReader.getWorkBuf();
             } catch (Exception e) {
-                throw new org.apache.drill.common.exceptions.DrillRuntimeException(e);
+                throw org.apache.drill.common.exceptions.UserException.functionError(e).build();
             }
         }
     }

@@ -57,7 +57,6 @@ public final class SelectorFunctionsBody {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SelectorFunctionsBody.class);
 
 
-
     private SelectorFunctionsBody() {
     }
 
@@ -166,11 +165,14 @@ public final class SelectorFunctionsBody {
         private JsonPathSelectorFuncBody() {
         }
 
-        public static Iterable<byte[]> eval(ValueHolder source,
-                                  ValueHolder selector) {
+        public static Iterable<byte[]> eval(ValueHolder source, ValueHolder selector) {
+            String json = FunctionsHelper.asString(source);
+            String localSelector = FunctionsHelper.asString(selector);
+            return eval(json, localSelector);
+        }
+
+        static Iterable<byte[]> eval(String json, String localSelector) {
             try {
-                String json = FunctionsHelper.asString(source);
-                String localSelector = FunctionsHelper.asString(selector);
 
                 Object result = JsonPath.read(json, localSelector);
 
