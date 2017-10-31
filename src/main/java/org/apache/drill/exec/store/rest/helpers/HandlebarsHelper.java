@@ -36,7 +36,7 @@ public final class HandlebarsHelper {
 
     public static String merge(String input, Map<String, Object> parameters) {
         Preconditions.checkNotNull(input, "input");
-        Preconditions.checkNotNull(input, "parameters");
+        Preconditions.checkNotNull(parameters, "parameters");
 
         Handlebars handlebars = new Handlebars().infiniteLoops(false);
         try {

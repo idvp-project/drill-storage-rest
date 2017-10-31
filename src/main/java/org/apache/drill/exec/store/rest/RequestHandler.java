@@ -146,7 +146,11 @@ public final class RequestHandler {
         }
 
         for (Map.Entry<String, String> header : config.getHeaders().entrySet()) {
-            request.addHeader(header.getKey(), header.getValue());
+            if (header.getValue() == null) {
+                request.addHeader(header.getKey(), null);
+            } else {
+                request.addHeader(header.getKey(), HandlebarsHelper.merge(header.getValue(), parameters));
+            }
         }
 
         return request;
