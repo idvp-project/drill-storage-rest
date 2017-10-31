@@ -165,6 +165,7 @@
                                             <include>net.minidev:accessors-smart</include>
                                             <include>com.github.jknack:handlebars</include>
                                             <include>org.antlr:antlr4-runtime</include>
+                                            <include> de.grundid.opendatalab:geojson-jackson</include>
                                         </includes>
                                         <excludes>
                                             <exclude>com.google.code.gson:gson</exclude>
