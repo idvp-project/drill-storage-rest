@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.rest.functions;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
@@ -173,8 +174,12 @@ public final class SelectorFunctionsBody {
 
         static Iterable<byte[]> eval(String json, String localSelector) {
             try {
-
-                Object result = JsonPath.read(json, localSelector);
+                Object result;
+                try {
+                    result = JsonPath.read(json, localSelector);
+                } catch (PathNotFoundException e) {
+                    return Collections.emptyList();
+                }
 
                 if (result instanceof Collection) {
                     Iterator<?> iterator = ((Collection<?>) result).iterator();

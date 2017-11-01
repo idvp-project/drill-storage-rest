@@ -17,14 +17,14 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.UserException;
-import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.codehaus.jackson.map.ObjectMapper;
+import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.geojson.*;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public final class GeoShapeFunctionsBody {
     private GeoShapeFunctionsBody() {
     }
 
-    public static Iterable<byte[]> convert(VarCharHolder source, String path) {
+    public static Iterable<byte[]> convert(ValueHolder source, String path) {
         String src = FunctionsHelper.asString(source);
 
         Iterable<byte[]> result = SelectorFunctionsBody.JsonPathSelectorFuncBody.eval(src, path);
