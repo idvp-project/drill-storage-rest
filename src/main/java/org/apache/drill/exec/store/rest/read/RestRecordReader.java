@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
@@ -101,8 +102,8 @@ public class RestRecordReader extends AbstractRecordReader {
         }
     }
 
-    private void setupParser() throws IOException, URISyntaxException, ExecutionSetupException {
-        RequestHandler.Result result = requestHandler.execute(scan, operatorContext);
+    private void setupParser() throws IOException, URISyntaxException, ExecutionSetupException, SchemaChangeException {
+        RequestHandler.Result result = requestHandler.execute(scan, operatorContext, fragmentContext.getConfig());
 
         JsonNodeFactory factory = JsonNodeFactory.withExactBigDecimals(false);
 

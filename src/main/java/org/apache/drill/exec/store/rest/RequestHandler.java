@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
@@ -38,7 +39,10 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
-import org.apache.http.impl.client.*;
+import org.apache.http.impl.client.AbstractResponseHandler;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.Args;
 
@@ -53,10 +57,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.sql.*;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -69,19 +71,22 @@ public final class RequestHandler {
 
     private final RuntimeQueryConfig config;
 
+    private long subqueryTime = 0;
+
     RequestHandler(RuntimeQueryConfig config) {
         this.config = config;
     }
 
     public Result execute(RestSubScan scan,
-                          OperatorContext context) throws URISyntaxException, IOException, ExecutionSetupException {
+                          OperatorContext context,
+                          DrillConfig drillConfig) throws URISyntaxException, IOException, ExecutionSetupException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         try (CloseableHttpClient client = HttpClientBuilder.create()
                 .useSystemProperties()
                 .setRetryHandler(new DefaultHttpRequestRetryHandler(0, false))
                 .build()) {
 
-            HttpUriRequest request = createRequest(config, scan.getSpec());
+            HttpUriRequest request = createRequest(config, scan.getSpec(), drillConfig);
             try (CloseableHttpResponse response = client.execute(request)) {
 
                 ResponseHandler<String> responseHandler = new RestResponseHandler();
@@ -97,27 +102,37 @@ public final class RequestHandler {
                 return new Result(contentType, body, headers);
             }
 
+        } catch (SQLException e) {
+            throw new ExecutionSetupException(e);
         } finally {
             long requestTime = stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
             context.getStats().addLongStat(RestMetric.TIME_REQUEST, requestTime);
+
+            if (subqueryTime != 0) {
+                context.getStats().addLongStat(RestMetric.TIME_SUBQUERIES, subqueryTime);
+            }
         }
     }
 
     private HttpUriRequest createRequest(RuntimeQueryConfig config,
-                                         RestScanSpec spec) throws URISyntaxException, IOException {
+                                         RestScanSpec spec,
+                                         DrillConfig drillConfig) throws URISyntaxException, IOException, SQLException {
 
         Map<String, ParameterValue> parameterValues = Collections.emptyMap();
         if (StringUtils.isNotBlank(spec.getParameters())) {
-            parameterValues = RestRecordReader.MAPPER.readValue(spec.getParameters(), new TypeReference<Map<String, ParameterValue>>() {});
+            parameterValues = RestRecordReader.MAPPER.readValue(spec.getParameters(),
+                    new TypeReference<Map<String, ParameterValue>>() {});
         }
 
         Map<String, Object> parameters = new HashMap<>();
+
         for (Map.Entry<String, ParameterValue> entry : parameterValues.entrySet()) {
             if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.QUERY) {
-                throw new IllegalStateException("QUERY parameters not yet supported");
+                String sql = Objects.toString(entry.getValue().getValue(), null);
+                parameters.put(entry.getKey(), executeSubQuery(sql, drillConfig));
+            } else {
+                parameters.put(entry.getKey(), entry.getValue() == null ? null : entry.getValue().getValue());
             }
-
-            parameters.put(entry.getKey(), entry.getValue() == null ? null : entry.getValue().getValue());
         }
 
         URI uri = createURI(config, parameters);
@@ -154,6 +169,30 @@ public final class RequestHandler {
         }
 
         return request;
+    }
+
+    private Object executeSubQuery(String sql, DrillConfig drillConfig) throws SQLException {
+        Preconditions.checkNotNull(sql, "Subquery sql is null");
+
+        List<Object> result = new ArrayList<>();
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+
+        int port = drillConfig.getInt("drill.exec.rpc.user.server.port");
+
+        try (Connection connection = DriverManager.getConnection("jdbc:drill:drillbit=127.0.0.1:" + port)) {
+            try (Statement statement = connection.createStatement()) {
+                try (ResultSet resultSet = statement.executeQuery(sql)) {
+                    while (resultSet.next()) {
+                        result.add(resultSet.getObject(1));
+                    }
+                }
+            }
+        } finally {
+            subqueryTime += stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+        }
+
+        return Collections.unmodifiableList(result);
     }
 
 

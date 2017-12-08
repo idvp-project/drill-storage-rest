@@ -27,8 +27,6 @@ public enum RestMetric implements MetricDef {
     TIME_SUBQUERIES,
     TIME_REQUEST,
     TIME_RESULT_SCAN,
-    TIME_JSON_TRANSFORM,
-    TIME_XML_TRANSFORM,
     TOTAL_SCAN;
 
     @Override

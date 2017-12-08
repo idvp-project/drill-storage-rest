@@ -57,7 +57,7 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
 
         OperatorContext operatorContext = context.newOperatorContext(scan);
 
-        RuntimeQueryConfig config = scan.getStoragePluginConfig().getRuntimeConfig(scan.getSpec().getQuery());
+        RuntimeQueryConfig config = scan.getStoragePlugin().getConfig().getRuntimeConfig(scan.getSpec().getQuery());
 
         RecordReader reader = new RestRecordReader(context, scan, new RequestHandler(config));
 

@@ -17,10 +17,7 @@
  */
 package org.apache.drill.exec.store.rest;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.*;
 import org.apache.drill.common.logical.StoragePluginConfigBase;
 import org.apache.drill.exec.store.rest.config.QueryConfig;
 import org.apache.drill.exec.store.rest.config.RuntimeConfigBuilder;
@@ -35,6 +32,7 @@ import java.util.Objects;
  * @since 15.06.2017.
  */
 @JsonTypeName(RestStoragePluginConfig.NAME)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RestStoragePluginConfig extends StoragePluginConfigBase {
 
     static final String NAME = "rest";
