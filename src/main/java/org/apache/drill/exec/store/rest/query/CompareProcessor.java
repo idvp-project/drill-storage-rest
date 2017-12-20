@@ -98,7 +98,7 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
         }
 
         this.path = path;
-        boolean success = scan.getStoragePlugin().getRequestParameters().equalsIgnoreCase(path.getAsUnescapedPath());
+        boolean success = scan.getStoragePlugin().getRequestParameters().equalsIgnoreCase(path.getRootSegmentPath());
         return success && valueArg.accept(this, valueArg);
     }
 
