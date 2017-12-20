@@ -58,7 +58,6 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
             evaluator.success = nameArg.accept(evaluator, valueArg);
         } else if (call.args.get(0) instanceof SchemaPath) {
             evaluator.success = true;
-            evaluator.path = (SchemaPath) nameArg;
         }
 
         return evaluator;
@@ -66,7 +65,6 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
 
     private final RestGroupScan scan;
     private boolean success = false;
-    private SchemaPath path;
     private String value;
 
     private CompareProcessor(RestGroupScan scan) {
@@ -75,10 +73,6 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
 
     boolean isSuccess() {
         return success;
-    }
-
-    SchemaPath getPath() {
-        return path;
     }
 
     String getValue() {
@@ -97,7 +91,6 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
             return false;
         }
 
-        this.path = path;
         boolean success = scan.getStoragePlugin().getRequestParameters().equalsIgnoreCase(path.getRootSegmentPath());
         return success && valueArg.accept(this, valueArg);
     }
