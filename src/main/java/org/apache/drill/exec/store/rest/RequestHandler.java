@@ -32,6 +32,7 @@ import org.apache.drill.exec.store.rest.read.RestMetric;
 import org.apache.drill.exec.store.rest.read.RestRecordReader;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -150,7 +151,16 @@ public final class RequestHandler {
             case POST: {
                 HttpPost post = new HttpPost(uri);
                 if (body != null) {
-                    post.setEntity(new ByteArrayEntity(body.getBytes(StandardCharsets.UTF_8)));
+
+                    ContentType contentType = getContentType(config);
+
+                    Charset charset = StandardCharsets.UTF_8;
+                    if (contentType != null && contentType.getCharset() != null) {
+                        charset = contentType.getCharset();
+                    }
+
+                    //Не ставим Content-Type здесь, он будет установлен как заголовок
+                    post.setEntity(new ByteArrayEntity(body.getBytes(charset)));
                 }
                 request = post;
                 break;
@@ -169,6 +179,26 @@ public final class RequestHandler {
         }
 
         return request;
+    }
+
+    private ContentType getContentType(RuntimeQueryConfig config) {
+        ContentType contentType = null;
+
+        try {
+            String contentTypeText = config.getHeaders().entrySet()
+                    .stream()
+                    .filter(e -> HttpHeaders.CONTENT_TYPE.equals(e.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+            if (contentTypeText != null) {
+                contentType = ContentType.parse(contentTypeText);
+            }
+        } catch (Exception e) {
+            logger.debug("Unknown content type", e);
+        }
+
+        return contentType;
     }
 
     private Object executeSubQuery(String sql, DrillConfig drillConfig) throws SQLException {
