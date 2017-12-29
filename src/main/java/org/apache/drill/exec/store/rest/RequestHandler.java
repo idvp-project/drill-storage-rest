@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.OperatorContext;
+import org.apache.drill.exec.store.rest.config.HttpMethod;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
 import org.apache.drill.exec.store.rest.helpers.HandlebarsHelper;
 import org.apache.drill.exec.store.rest.query.ParameterValue;
@@ -137,10 +138,6 @@ public final class RequestHandler {
         }
 
         URI uri = createURI(config, parameters);
-        String body = null;
-        if (StringUtils.isNotBlank(config.getBody())) {
-            body = HandlebarsHelper.merge(config.getBody(), parameters);
-        }
 
         HttpUriRequest request;
         switch (config.getMethod()) {
@@ -149,20 +146,7 @@ public final class RequestHandler {
                 break;
             }
             case POST: {
-                HttpPost post = new HttpPost(uri);
-                if (body != null) {
-
-                    ContentType contentType = getContentType(config);
-
-                    Charset charset = StandardCharsets.UTF_8;
-                    if (contentType != null && contentType.getCharset() != null) {
-                        charset = contentType.getCharset();
-                    }
-
-                    //Не ставим Content-Type здесь, он будет установлен как заголовок
-                    post.setEntity(new ByteArrayEntity(body.getBytes(charset)));
-                }
-                request = post;
+                request = new HttpPost(uri);
                 break;
             }
             default: {
@@ -178,27 +162,38 @@ public final class RequestHandler {
             }
         }
 
-        return request;
-    }
+        if (config.getMethod() == HttpMethod.POST && request instanceof HttpPost) {
+            HttpPost post = (HttpPost) request;
 
-    private ContentType getContentType(RuntimeQueryConfig config) {
-        ContentType contentType = null;
-
-        try {
-            String contentTypeText = config.getHeaders().entrySet()
-                    .stream()
-                    .filter(e -> HttpHeaders.CONTENT_TYPE.equals(e.getKey()))
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-            if (contentTypeText != null) {
-                contentType = ContentType.parse(contentTypeText);
+            String body = null;
+            if (StringUtils.isNotBlank(config.getBody())) {
+                body = HandlebarsHelper.merge(config.getBody(), parameters);
             }
-        } catch (Exception e) {
-            logger.debug("Unknown content type", e);
+
+            if (body != null) {
+
+                ContentType contentType = null;
+                try {
+                    Header contentTypeHeader = request.getFirstHeader(HttpHeaders.CONTENT_TYPE);
+                    if (contentTypeHeader != null) {
+                        contentType = ContentType.parse(contentTypeHeader.getValue());
+                    }
+                } catch (Exception e) {
+                    logger.debug("Unknown content type");
+                }
+
+                Charset charset = StandardCharsets.UTF_8;
+                if (contentType != null && contentType.getCharset() != null) {
+                    charset = contentType.getCharset();
+                }
+
+
+                //Не ставим Content-Type здесь, он будет установлен как заголовок
+                post.setEntity(new ByteArrayEntity(body.getBytes(charset)));
+            }
         }
 
-        return contentType;
+        return request;
     }
 
     private Object executeSubQuery(String sql, DrillConfig drillConfig) throws SQLException {
