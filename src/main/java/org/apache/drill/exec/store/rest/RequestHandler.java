@@ -306,7 +306,10 @@ public final class RequestHandler {
                 }
 
                 if (charset == null) {
-                    charset = ContentType.getByMimeType(contentType.getMimeType()).getCharset();
+                    ContentType byMimeType = ContentType.getByMimeType(contentType.getMimeType());
+                    if (byMimeType != null) {
+                        charset = byMimeType.getCharset();
+                    }
                 }
             }
 
