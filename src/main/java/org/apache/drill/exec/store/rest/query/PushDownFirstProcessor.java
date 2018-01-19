@@ -55,17 +55,15 @@ class PushDownFirstProcessor extends AbstractExprVisitor<Boolean, LogicalExpress
         return COMPARE_FUNCTIONS.contains(function);
     }
 
-    private PushDownFirstProcessor(Collection<String> filterNames) {
+    private PushDownFirstProcessor(Map<String, String> filterToParameterMap) {
         this.filterNames = new TreeMap<>(String::compareToIgnoreCase);
-        for (String s : filterNames) {
-            this.filterNames.put(s, s);
-        }
+        this.filterNames.putAll(filterToParameterMap);
     }
 
-    static PushDownFirstProcessor process(final FunctionCall call, Collection<String> filterNames) {
+    static PushDownFirstProcessor process(final FunctionCall call, Map<String, String> filterToParameterMap) {
         LogicalExpression nameArg = call.args.get(0);
         LogicalExpression valueArg = call.args.size() >= 2 ? call.args.get(1) : null;
-        PushDownFirstProcessor evaluator = new PushDownFirstProcessor(filterNames);
+        PushDownFirstProcessor evaluator = new PushDownFirstProcessor(filterToParameterMap);
 
         if (valueArg != null) { // binary function
             if (VALUE_EXPRESSION_CLASSES.contains(nameArg.getClass())) {
@@ -80,6 +78,7 @@ class PushDownFirstProcessor extends AbstractExprVisitor<Boolean, LogicalExpress
     }
 
     private boolean success = false;
+    private String parameter;
     private String filter;
     private Object value;
 
@@ -87,7 +86,11 @@ class PushDownFirstProcessor extends AbstractExprVisitor<Boolean, LogicalExpress
         return success;
     }
 
-    public String getFilter() {
+    String getParameter() {
+        return parameter;
+    }
+
+    String getFilter() {
         return filter;
     }
 
@@ -178,11 +181,13 @@ class PushDownFirstProcessor extends AbstractExprVisitor<Boolean, LogicalExpress
         boolean success = filterNames.keySet().contains(path.getRootSegmentPath());
 
         if (success && valueArg.accept(this, valueArg)) {
-            filter = filterNames.get(path.getRootSegmentPath());
+            filter = path.getRootSegmentPath();
+            parameter = filterNames.get(path.getRootSegmentPath());
             return true;
         }
 
         return false;
     }
+
 
 }

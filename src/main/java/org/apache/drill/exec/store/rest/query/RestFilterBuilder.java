@@ -29,10 +29,7 @@ import org.apache.drill.exec.store.rest.RestScanSpec;
 import org.apache.drill.exec.store.rest.read.RestRecordReader;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * @author Oleg Zinoviev
@@ -47,7 +44,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
     private final LogicalExpression expression;
 
     private RestScanSpec nodeScanSpec = null;
-
+    private final List<String> pushedDownFilters = new ArrayList<>();
 
     RestFilterBuilder(RestGroupScan scan, LogicalExpression expression) {
         this.scan = scan;
@@ -56,6 +53,10 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
 
     RestScanSpec parseTree() {
         return expression.accept(this, null);
+    }
+
+    List<String> getPushedDownFilters() {
+        return Collections.unmodifiableList(pushedDownFilters);
     }
 
     @Override
@@ -69,14 +70,15 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
                 nodeScanSpec = createScanSpec(processor);
             }
         } else if (nodeScanSpec != null && PushDownFirstProcessor.isCompareFunction(functionName)) {
-            List<String> parameters = nodeScanSpec.getParameters()
-                    .entrySet()
-                    .stream()
-                    .filter(e -> e.getValue() != null && e.getValue().getType() == ParameterValue.Type.PUSH_DOWN)
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
 
-            PushDownFirstProcessor processor = PushDownFirstProcessor.process(call, parameters);
+            Map<String, String> filterToParameterMap = new HashMap<>();
+            for (Map.Entry<String, ParameterValue> entry : nodeScanSpec.getParameters().entrySet()) {
+                if (entry.getValue() != null & entry.getValue().getType() == ParameterValue.Type.PUSH_DOWN) {
+                    filterToParameterMap.put(entry.getValue().getFilterCode(), entry.getKey());
+                }
+            }
+
+            PushDownFirstProcessor processor = PushDownFirstProcessor.process(call, filterToParameterMap);
             if (processor.isSuccess()) {
                 nodeScanSpec = createScanSpec(processor);
             }
@@ -103,9 +105,11 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
         }
 
         String filter = processor.getFilter();
+        String parameter = processor.getParameter();
         Object value = processor.getValue();
 
-        nodeScanSpec.getParameters().put(filter, new ParameterValue(ParameterValue.Type.VALUE, value));
+        nodeScanSpec.getParameters().put(parameter, new ParameterValue(ParameterValue.Type.VALUE, value, null, null));
+        pushedDownFilters.add(filter);
         return nodeScanSpec;
     }
 

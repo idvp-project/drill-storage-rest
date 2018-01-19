@@ -32,6 +32,9 @@ import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.drill.exec.store.rest.RestGroupScan;
 import org.apache.drill.exec.store.rest.RestScanSpec;
 
+import java.util.Collection;
+import java.util.Map;
+
 public class RestPushFilterIntoScan extends StoragePluginOptimizerRule {
 
     public static final StoragePluginOptimizerRule FILTER_ON_SCAN = new RestPushFilterIntoScan(RelOptHelper.some(FilterPrel.class,
@@ -62,21 +65,32 @@ public class RestPushFilterIntoScan extends StoragePluginOptimizerRule {
             return;
         }
 
-        boolean pushedDown = newScanSpec.getParameters().values().stream()
-                .allMatch(p -> p.getType() != ParameterValue.Type.PUSH_DOWN);
+        postProcessScanSpec(newScanSpec);
 
         final RestGroupScan newGroupsScan = new RestGroupScan(groupScan.getUserName(),
                 groupScan.getStoragePlugin(),
                 newScanSpec,
                 groupScan.getColumns(),
-                pushedDown);
+                true);
 
         final RelNode childRel = ScanPrel.create(scan, filter.getTraitSet(), newGroupsScan, scan.getRowType());
-        call.transformTo(filter.copy(filter.getTraitSet(), childRel, rewriteCondition(scan, condition)));
+        call.transformTo(filter.copy(filter.getTraitSet(), childRel, rewriteCondition(scan, filterBuilder.getPushedDownFilters(), condition)));
     }
 
-    private RexNode rewriteCondition(ScanPrel scan, RexNode condition) {
-        DrillFilterRewriter shuttle = new DrillFilterRewriter(scan);
+    private void postProcessScanSpec(RestScanSpec newScanSpec) {
+        for (Map.Entry<String, ParameterValue> entry : newScanSpec.getParameters().entrySet()) {
+            if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.PUSH_DOWN) {
+                if (entry.getValue().getDefaultValue() != null) {
+                    entry.setValue(entry.getValue().getDefaultValue());
+                } else {
+                    entry.setValue(new ParameterValue(ParameterValue.Type.VALUE, null, null, null));
+                }
+            }
+        }
+    }
+
+    private RexNode rewriteCondition(ScanPrel scan, Collection<String> pushedDownFilters, RexNode condition) {
+        DrillFilterRewriter shuttle = new DrillFilterRewriter(scan, pushedDownFilters);
         return shuttle.apply(condition);
     }
 

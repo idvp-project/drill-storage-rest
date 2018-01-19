@@ -25,6 +25,9 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.drill.exec.planner.physical.ScanPrel;
 import org.apache.drill.exec.store.rest.RestGroupScan;
 
+import java.util.Collection;
+import java.util.TreeSet;
+
 /**
  * @author Oleg Zinoviev
  * @since 12.10.2017
@@ -32,10 +35,13 @@ import org.apache.drill.exec.store.rest.RestGroupScan;
 public class DrillFilterRewriter extends RexShuttle {
     private final ScanPrel scan;
     private final RestGroupScan groupScan;
+    private final TreeSet<String> pushedDownFilters;
 
-    DrillFilterRewriter(ScanPrel scan) {
+    DrillFilterRewriter(ScanPrel scan, Collection<String> pushedDownFilters) {
         this.scan = scan;
         this.groupScan = (RestGroupScan) scan.getGroupScan();
+        this.pushedDownFilters = new TreeSet<>(String::compareToIgnoreCase);
+        this.pushedDownFilters.addAll(pushedDownFilters);
     }
 
     @Override
@@ -51,6 +57,13 @@ public class DrillFilterRewriter extends RexShuttle {
                     }
 
                     if (groupScan.getStoragePlugin().getRequestParameters().equalsIgnoreCase(field.getName())) {
+                        RexBuilder builder = new RexBuilder(new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT));
+                        RexLiteral left = builder.makeLiteral("1");
+                        RexLiteral right = builder.makeLiteral("1");
+                        return builder.makeCall(call.getOperator(), left, right);
+                    }
+
+                    if (pushedDownFilters.contains(field.getName())) {
                         RexBuilder builder = new RexBuilder(new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT));
                         RexLiteral left = builder.makeLiteral("1");
                         RexLiteral right = builder.makeLiteral("1");

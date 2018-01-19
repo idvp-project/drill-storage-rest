@@ -30,14 +30,19 @@ public final class ParameterValue {
 
     private final Type type;
     private final Object value;
+    private final String filterCode;
+    private final ParameterValue defaultValue;
 
     @JsonCreator
     public ParameterValue(
             @JsonProperty(value = "type", required = true) Type type,
-            @JsonProperty(value = "value") Object value) {
-
+            @JsonProperty(value = "value") Object value,
+            @JsonProperty(value = "filterCode") String filterCode,
+            @JsonProperty(value = "defaultValue") ParameterValue defaultValue) {
         this.type = type;
         this.value = value;
+        this.filterCode = filterCode;
+        this.defaultValue = defaultValue;
     }
 
     public Type getType() {
@@ -46,6 +51,14 @@ public final class ParameterValue {
 
     public Object getValue() {
         return value;
+    }
+
+    String getFilterCode() {
+        return filterCode;
+    }
+
+    ParameterValue getDefaultValue() {
+        return defaultValue;
     }
 
     @SuppressWarnings("unused")
