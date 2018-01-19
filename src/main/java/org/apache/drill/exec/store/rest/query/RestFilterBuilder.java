@@ -63,7 +63,7 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
         String functionName = call.getName();
         ImmutableList<LogicalExpression> args = call.args;
 
-        if (TableParamProcessor.isCompareFunction(functionName)) {
+        if (nodeScanSpec == null && TableParamProcessor.isCompareFunction(functionName)) {
             TableParamProcessor processor = TableParamProcessor.process(call, scan);
             if (processor.isSuccess()) {
                 nodeScanSpec = createScanSpec(processor);
@@ -120,8 +120,6 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
                 throw new RuntimeException(e);
             }
         }
-
-
 
         return new RestScanSpec(scan.getSpec().getQuery(), parameterValues);
     }
