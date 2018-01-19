@@ -62,8 +62,14 @@ public class RestPushFilterIntoScan extends StoragePluginOptimizerRule {
             return;
         }
 
-        final RestGroupScan newGroupsScan =
-                new RestGroupScan(groupScan.getUserName(), groupScan.getStoragePlugin(), newScanSpec, groupScan.getColumns(), true);
+        boolean pushedDown = newScanSpec.getParameters().values().stream()
+                .allMatch(p -> p.getType() != ParameterValue.Type.PUSH_DOWN);
+
+        final RestGroupScan newGroupsScan = new RestGroupScan(groupScan.getUserName(),
+                groupScan.getStoragePlugin(),
+                newScanSpec,
+                groupScan.getColumns(),
+                pushedDown);
 
         final RelNode childRel = ScanPrel.create(scan, filter.getTraitSet(), newGroupsScan, scan.getRowType());
         call.transformTo(filter.copy(filter.getTraitSet(), childRel, rewriteCondition(scan, condition)));

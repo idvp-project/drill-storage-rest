@@ -48,9 +48,11 @@ public final class ParameterValue {
         return value;
     }
 
+    @SuppressWarnings("unused")
     public enum Type {
         QUERY("query"),
-        VALUE("value");
+        VALUE("value"),
+        PUSH_DOWN("pushDown");
 
         private final String value;
 

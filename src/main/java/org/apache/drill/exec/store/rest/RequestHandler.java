@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.store.rest;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.apache.commons.io.IOUtils;
@@ -120,14 +119,9 @@ public final class RequestHandler {
                                          RestScanSpec spec,
                                          DrillConfig drillConfig) throws URISyntaxException, IOException, SQLException {
 
-        Map<String, ParameterValue> parameterValues = Collections.emptyMap();
-        if (StringUtils.isNotBlank(spec.getParameters())) {
-            parameterValues = RestRecordReader.MAPPER.readValue(spec.getParameters(),
-                    new TypeReference<Map<String, ParameterValue>>() {});
-        }
+        Map<String, ParameterValue> parameterValues = spec.getParameters();
 
         Map<String, Object> parameters = new HashMap<>();
-
         for (Map.Entry<String, ParameterValue> entry : parameterValues.entrySet()) {
             if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.QUERY) {
                 String sql = Objects.toString(entry.getValue().getValue(), null);

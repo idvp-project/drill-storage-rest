@@ -31,7 +31,7 @@ import java.util.Set;
  * @author Oleg Zinoviev
  * @since 19.06.2017.
  */
-class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, RuntimeException> {
+class TableParamProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, RuntimeException> {
     private final static Set<String> COMPARE_FUNCTIONS = ImmutableSet.<String>builder()
             .add("equal")
             .build();
@@ -44,10 +44,10 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
         return COMPARE_FUNCTIONS.contains(function);
     }
 
-    static CompareProcessor process(final FunctionCall call, RestGroupScan scan) {
+    static TableParamProcessor process(final FunctionCall call, RestGroupScan scan) {
         LogicalExpression nameArg = call.args.get(0);
         LogicalExpression valueArg = call.args.size() >= 2 ? call.args.get(1) : null;
-        CompareProcessor evaluator = new CompareProcessor(scan);
+        TableParamProcessor evaluator = new TableParamProcessor(scan);
 
         if (valueArg != null) { // binary function
             if (VALUE_EXPRESSION_CLASSES.contains(nameArg.getClass())) {
@@ -56,8 +56,6 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
                 nameArg = swapArg;
             }
             evaluator.success = nameArg.accept(evaluator, valueArg);
-        } else if (call.args.get(0) instanceof SchemaPath) {
-            evaluator.success = true;
         }
 
         return evaluator;
@@ -67,7 +65,7 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
     private boolean success = false;
     private String value;
 
-    private CompareProcessor(RestGroupScan scan) {
+    private TableParamProcessor(RestGroupScan scan) {
         this.scan = scan;
     }
 

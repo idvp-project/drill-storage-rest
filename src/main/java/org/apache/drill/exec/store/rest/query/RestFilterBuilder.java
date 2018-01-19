@@ -17,13 +17,22 @@
  */
 package org.apache.drill.exec.store.rest.query;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.expression.BooleanOperator;
 import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.visitors.AbstractExprVisitor;
 import org.apache.drill.exec.store.rest.RestGroupScan;
 import org.apache.drill.exec.store.rest.RestScanSpec;
+import org.apache.drill.exec.store.rest.read.RestRecordReader;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Oleg Zinoviev
@@ -37,6 +46,9 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
     private final RestGroupScan scan;
     private final LogicalExpression expression;
 
+    private RestScanSpec nodeScanSpec = null;
+
+
     RestFilterBuilder(RestGroupScan scan, LogicalExpression expression) {
         this.scan = scan;
         this.expression = expression;
@@ -48,12 +60,23 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
 
     @Override
     public RestScanSpec visitFunctionCall(FunctionCall call, Void value) throws RuntimeException {
-        RestScanSpec nodeScanSpec = null;
         String functionName = call.getName();
         ImmutableList<LogicalExpression> args = call.args;
 
-        if (CompareProcessor.isCompareFunction(functionName)) {
-            CompareProcessor processor = CompareProcessor.process(call, scan);
+        if (TableParamProcessor.isCompareFunction(functionName)) {
+            TableParamProcessor processor = TableParamProcessor.process(call, scan);
+            if (processor.isSuccess()) {
+                nodeScanSpec = createScanSpec(processor);
+            }
+        } else if (nodeScanSpec != null && PushDownFirstProcessor.isCompareFunction(functionName)) {
+            List<String> parameters = nodeScanSpec.getParameters()
+                    .entrySet()
+                    .stream()
+                    .filter(e -> e.getValue() != null && e.getValue().getType() == ParameterValue.Type.PUSH_DOWN)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            PushDownFirstProcessor processor = PushDownFirstProcessor.process(call, parameters);
             if (processor.isSuccess()) {
                 nodeScanSpec = createScanSpec(processor);
             }
@@ -74,9 +97,33 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
         return nodeScanSpec;
     }
 
-    private RestScanSpec createScanSpec(CompareProcessor processor) {
+    private RestScanSpec createScanSpec(PushDownFirstProcessor processor) {
+        if (nodeScanSpec == null) {
+            throw new IllegalStateException("nodeScanSpec is null");
+        }
+
+        String filter = processor.getFilter();
+        Object value = processor.getValue();
+
+        nodeScanSpec.getParameters().put(filter, new ParameterValue(ParameterValue.Type.VALUE, value));
+        return nodeScanSpec;
+    }
+
+    private RestScanSpec createScanSpec(TableParamProcessor processor) {
         String value = processor.getValue();
-        return new RestScanSpec(scan.getSpec().getQuery(), value);
+
+        Map<String, ParameterValue> parameterValues = Collections.emptyMap();
+        if (StringUtils.isNotBlank(value)) {
+            try {
+                parameterValues = RestRecordReader.MAPPER.readValue(value, new TypeReference<Map<String, ParameterValue>>() {});
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+
+        return new RestScanSpec(scan.getSpec().getQuery(), parameterValues);
     }
 
     @Override
