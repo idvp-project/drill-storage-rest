@@ -73,7 +73,7 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
     public AbstractGroupScan getPhysicalScan(String userName, JSONOptions selection, List<SchemaPath> columns) throws IOException {
         RestScanSpec scanSpec = selection.getListWith(new ObjectMapper(), new TypeReference<RestScanSpec>() {
         });
-        return new RestGroupScan(userName, this, scanSpec, columns, scanSpec.getParameters() != null);
+        return new RestGroupScan(userName, this, scanSpec, columns, false);
     }
 
     @SuppressWarnings("deprecation")

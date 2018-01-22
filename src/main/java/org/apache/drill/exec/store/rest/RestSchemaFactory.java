@@ -61,7 +61,7 @@ public class RestSchemaFactory implements SchemaFactory {
 
         @Override
         public Table getTable(String name) {
-            return new RestTable(plugin, schemaName, new RestScanSpec(name, null));
+            return new RestTable(plugin, schemaName, new RestScanSpec(name, null, null));
         }
     }
 

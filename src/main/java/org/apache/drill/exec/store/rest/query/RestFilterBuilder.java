@@ -125,7 +125,14 @@ public class RestFilterBuilder extends AbstractExprVisitor<RestScanSpec, Void, R
             }
         }
 
-        return new RestScanSpec(scan.getSpec().getQuery(), parameterValues);
+        List<String> filtersToPushDown = new ArrayList<>();
+        for (ParameterValue v : parameterValues.values()) {
+            if (v.getType() == ParameterValue.Type.PUSH_DOWN) {
+                filtersToPushDown.add(v.getFilterCode());
+            }
+        }
+
+        return new RestScanSpec(scan.getSpec().getQuery(), parameterValues, filtersToPushDown);
     }
 
     @Override

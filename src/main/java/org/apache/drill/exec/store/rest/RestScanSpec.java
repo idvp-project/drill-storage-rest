@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.drill.exec.store.rest.query.ParameterValue;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
@@ -35,12 +36,15 @@ public class RestScanSpec {
 
     private final String query;
     private final Map<String, ParameterValue> parameters;
+    private final Collection<String> filtersToPushDown;
 
     @JsonCreator
     public RestScanSpec(@JsonProperty(value = "query", required = true) final String query,
-                        @JsonProperty(value = "parameters") final Map<String, ParameterValue> parameters) {
+                        @JsonProperty(value = "parameters") final Map<String, ParameterValue> parameters,
+                        @JsonProperty(value = "filtersToPushDown") final Collection<String> filtersToPushDown) {
         this.query = query;
         this.parameters = parameters == null ? Collections.emptyMap() : parameters;
+        this.filtersToPushDown = filtersToPushDown == null ? Collections.emptySet() : filtersToPushDown;
     }
 
     @JsonProperty
@@ -53,4 +57,8 @@ public class RestScanSpec {
         return parameters;
     }
 
+    @JsonProperty
+    public Collection<String> getFiltersToPushDown() {
+        return filtersToPushDown;
+    }
 }
