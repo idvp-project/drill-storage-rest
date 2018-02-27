@@ -18,9 +18,9 @@
 package org.apache.drill.exec.store.rest.functions;
 
 import com.google.common.base.Charsets;
-import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
@@ -39,7 +39,10 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.*;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -92,22 +95,30 @@ public final class SelectorFunctionsBody {
                                             ValueHolder selector) {
             String html = FunctionsHelper.asString(source);
             String localSelector = FunctionsHelper.asString(selector);
-            Document parse = Jsoup.parse(html);
-            Elements elements = parse.select(localSelector);
-            Iterator<Element> iterator = elements.iterator();
-            return () -> new Iterator<byte[]>() {
+            if (StringUtils.isEmpty(html)) {
+                return Collections.emptyList();
+            }
 
-                @Override
-                public boolean hasNext() {
-                    return iterator.hasNext();
-                }
+            try {
+                Document parse = Jsoup.parse(html);
+                Elements elements = parse.select(localSelector);
+                Iterator<Element> iterator = elements.iterator();
+                return () -> new Iterator<byte[]>() {
 
-                @Override
-                public byte[] next() {
-                    String inner = iterator.next().html();
-                    return inner.getBytes(Charsets.UTF_8);
-                }
-            };
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    @Override
+                    public byte[] next() {
+                        String inner = iterator.next().html();
+                        return inner.getBytes(Charsets.UTF_8);
+                    }
+                };
+            } catch (Exception e) {
+                throw UserException.functionError(e).message("CssSelectorFuncBody").build(logger);
+            }
         }
     }
 
@@ -120,6 +131,9 @@ public final class SelectorFunctionsBody {
             try {
                 String xml = FunctionsHelper.asString(source);
                 String localSelector = FunctionsHelper.asString(selector);
+                if (StringUtils.isEmpty(xml)) {
+                    return Collections.emptyList();
+                }
 
                 XPathFactory xPathFactory = XPathFactory.newInstance();
                 XPath xPath = xPathFactory.newXPath();
@@ -156,7 +170,7 @@ public final class SelectorFunctionsBody {
                     }
                 };
 
-            } catch (XPathExpressionException | TransformerException e) {
+            } catch (Exception e) {
                 throw UserException.functionError(e).message("XPathSelectorFuncBody").build(logger);
             }
         }
@@ -173,6 +187,10 @@ public final class SelectorFunctionsBody {
         }
 
         static Iterable<byte[]> eval(String json, String localSelector) {
+            if (StringUtils.isEmpty(json)) {
+                return Collections.emptyList();
+            }
+
             try {
                 Object result;
                 try {
@@ -181,7 +199,9 @@ public final class SelectorFunctionsBody {
                     return Collections.emptyList();
                 }
 
-                if (result instanceof Collection) {
+                if (result == null) {
+                    return Collections.emptyList();
+                } else if (result instanceof Collection) {
                     Iterator<?> iterator = ((Collection<?>) result).iterator();
                     return () -> new Iterator<byte[]>() {
 
@@ -205,7 +225,7 @@ public final class SelectorFunctionsBody {
                 }
 
 
-            } catch (InvalidPathException | IOException e) {
+            } catch (Exception e) {
                 throw UserException.functionError(e).message("JsonPathSelectorFuncBody").build(logger);
             }
         }
