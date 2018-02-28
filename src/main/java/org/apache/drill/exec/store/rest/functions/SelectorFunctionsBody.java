@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
+import com.bazaarvoice.jolt.Chainr;
+import com.bazaarvoice.jolt.chainr.instantiator.DefaultChainrInstantiator;
 import com.google.common.base.Charsets;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
@@ -46,6 +48,7 @@ import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -80,6 +83,10 @@ public final class SelectorFunctionsBody {
 
         if ("jPath".equalsIgnoreCase(t) || "jsonPath".equalsIgnoreCase(t)) {
             return JsonPathSelectorFuncBody.eval(sourceHolder, selectorHolder);
+        }
+
+        if ("jolt".equalsIgnoreCase(t)) {
+            return JoltSelectorFuncBody.eval(sourceHolder, selectorHolder);
         }
 
         throw UserException.functionError()
@@ -231,6 +238,61 @@ public final class SelectorFunctionsBody {
 
             } catch (Exception e) {
                 throw UserException.functionError(e).message("JsonPathSelectorFuncBody").build(logger);
+            }
+        }
+    }
+
+    public static class JoltSelectorFuncBody {
+        private JoltSelectorFuncBody() {
+        }
+
+        public static Iterable<byte[]> eval(ValueHolder source, ValueHolder selector) {
+            String json = FunctionsHelper.asString(source);
+            String localSelector = FunctionsHelper.asString(selector);
+
+            if (StringUtils.isEmpty(json)) {
+                return Collections.emptyList();
+            }
+
+            try {
+
+                Object spec = mapper.readValue(localSelector, Object.class);
+                if (spec != null) {
+                    if (spec instanceof Collection) {
+                        spec = new ArrayList<>((Collection<?>) spec);
+                    } else {
+                        spec = Collections.singletonList(spec);
+                    }
+                }
+
+                Chainr chainr = Chainr.fromSpec(spec, new DefaultChainrInstantiator());
+                Object result = chainr.transform(mapper.readValue(json, Object.class));
+                if (result == null) {
+                    return Collections.emptyList();
+                } else if (result instanceof Collection) {
+                    Iterator<?> iterator = ((Collection<?>) result).iterator();
+                    return () -> new Iterator<byte[]>() {
+
+                        @Override
+                        public boolean hasNext() {
+                            return iterator.hasNext();
+                        }
+
+                        @Override
+                        public byte[] next() {
+                            Object inner = iterator.next();
+                            try {
+                                return mapper.writeValueAsBytes(inner);
+                            } catch (IOException e) {
+                                throw UserException.functionError(e).message("JoltSelectorFuncBody").build(logger);
+                            }
+                        }
+                    };
+                } else {
+                    return Collections.singletonList(mapper.writeValueAsBytes(result));
+                }
+            } catch (Exception e) {
+                throw UserException.functionError(e).message("JoltSelectorFuncBody").build(logger);
             }
         }
     }

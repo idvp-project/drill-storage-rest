@@ -117,7 +117,32 @@
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
                 </exclusion>
-
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.jolt</groupId>
+            <artifactId>jolt-core</artifactId>
+            <version>0.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.inject</groupId>
+                    <artifactId>javax.inject</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.jolt</groupId>
+            <artifactId>json-utils</artifactId>
+            <version>0.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <!-- Template engine for service data source -->
@@ -168,12 +193,14 @@
                                             <include>org.apache.httpcomponents:httpcore</include>
                                             <include>org.jsoup:jsoup</include>
                                             <include>org.json:json</include>
+                                            <include>com.bazaarvoice.jolt:jolt-core</include>
+                                            <include>com.bazaarvoice.jolt:json-utils</include>
                                             <include>com.jayway.jsonpath:json-path</include>
                                             <include>net.minidev:json-smart</include>
                                             <include>net.minidev:accessors-smart</include>
                                             <include>com.github.jknack:handlebars</include>
                                             <include>org.antlr:antlr4-runtime</include>
-                                            <include> de.grundid.opendatalab:geojson-jackson</include>
+                                            <include>de.grundid.opendatalab:geojson-jackson</include>
                                         </includes>
                                         <excludes>
                                             <exclude>com.google.code.gson:gson</exclude>
@@ -216,7 +243,8 @@
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${basedir}/target/classes/org/apache/drill/exec/store/rest/functions</outputDirectory>
+                            <outputDirectory>${basedir}/target/classes/org/apache/drill/exec/store/rest/functions
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>src/main/java/org/apache/drill/exec/store/rest/functions</directory>
