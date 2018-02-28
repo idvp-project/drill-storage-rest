@@ -95,6 +95,10 @@ public final class SelectorFunctionsBody {
                                             ValueHolder selector) {
             String html = FunctionsHelper.asString(source);
             String localSelector = FunctionsHelper.asString(selector);
+            if (localSelector == null) {
+                localSelector = "";
+            }
+
             if (StringUtils.isEmpty(html)) {
                 return Collections.emptyList();
             }

@@ -28,8 +28,6 @@ import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
 import org.apache.drill.exec.store.rest.read.RestRecordReader;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 
@@ -45,15 +43,12 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
         assert children == null || children.isEmpty();
         try {
             return createBatchScan(context, scan);
-        } catch (URISyntaxException | IOException e) {
+        } catch (RuntimeException e) {
             throw new ExecutionSetupException(e);
         }
     }
 
-    private CloseableRecordBatch createBatchScan(FragmentContext context, RestSubScan scan) throws
-            URISyntaxException,
-            IOException,
-            ExecutionSetupException {
+    private CloseableRecordBatch createBatchScan(FragmentContext context, RestSubScan scan) {
 
         OperatorContext operatorContext = context.newOperatorContext(scan);
 

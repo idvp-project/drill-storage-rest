@@ -22,6 +22,7 @@ import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
@@ -30,7 +31,7 @@ import javax.inject.Inject;
  * @author Oleg Zinoviev
  * @since 22.06.2017.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "Duplicates"})
 public class DecodeFunctions {
     private DecodeFunctions() {
     }
@@ -44,7 +45,7 @@ public class DecodeFunctions {
         VarCharHolder source;
 
         @Output
-        VarCharHolder output;
+        NullableVarCharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -56,14 +57,19 @@ public class DecodeFunctions {
         @Override
         public void eval() {
             String result = org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(source);
-            byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
-            output.start = 0;
-            output.end = bytes.length;
+            if (result == null) {
+                output.isSet = 0;
+            } else {
+                output.isSet = 1;
+                byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
+                output.start = 0;
+                output.end = bytes.length;
 
-            for(int id = 0; id < bytes.length; ++id) {
-                byte currentByte = bytes[id];
-                output.buffer.setByte(id, currentByte);
+                for (int id = 0; id < bytes.length; ++id) {
+                    byte currentByte = bytes[id];
+                    output.buffer.setByte(id, currentByte);
+                }
             }
         }
     }
@@ -77,7 +83,7 @@ public class DecodeFunctions {
         VarCharHolder source;
 
         @Output
-        VarCharHolder output;
+        NullableVarCharHolder output;
 
         @Inject
         DrillBuf buffer;
@@ -89,14 +95,19 @@ public class DecodeFunctions {
         @Override
         public void eval() {
             String result = org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.XmlDecodeVarCharFuncBody.eval(source);
-            byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
-            output.start = 0;
-            output.end = bytes.length;
+            if (result == null) {
+                output.isSet = 0;
+            } else {
+                output.isSet = 1;
+                byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
+                output.start = 0;
+                output.end = bytes.length;
 
-            for(int id = 0; id < bytes.length; ++id) {
-                byte currentByte = bytes[id];
-                output.buffer.setByte(id, currentByte);
+                for (int id = 0; id < bytes.length; ++id) {
+                    byte currentByte = bytes[id];
+                    output.buffer.setByte(id, currentByte);
+                }
             }
         }
     }

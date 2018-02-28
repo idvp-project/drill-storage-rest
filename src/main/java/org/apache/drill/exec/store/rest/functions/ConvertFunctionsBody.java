@@ -36,6 +36,10 @@ public final class ConvertFunctionsBody {
 
         public static String eval(ValueHolder source) {
             String xml = FunctionsHelper.asString(source);
+            if (xml == null) {
+                return null;
+            }
+
             String result = FunctionsHelper.removeNamespaces(xml);
 
             JSONObject xmlJSONObj = XML.toJSONObject(result, true);

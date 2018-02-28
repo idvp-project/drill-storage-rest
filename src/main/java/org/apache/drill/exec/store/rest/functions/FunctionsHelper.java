@@ -48,18 +48,30 @@ public final class FunctionsHelper {
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVarCharHolder) {
             NullableVarCharHolder vch = (NullableVarCharHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof Var16CharHolder) {
             Var16CharHolder vch = (Var16CharHolder) source;
             result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVar16CharHolder) {
             NullableVar16CharHolder vch = (NullableVar16CharHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
         } else if (source instanceof VarBinaryHolder) {
             VarBinaryHolder vch = (VarBinaryHolder) source;
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVarBinaryHolder) {
             NullableVarBinaryHolder vch = (NullableVarBinaryHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof ObjectHolder) {
             ObjectHolder oh = (ObjectHolder) source;
