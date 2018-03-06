@@ -126,8 +126,6 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
                 return; //Фильтры уже проброшены в запрос
             }
 
-            // convert the filter to one that references the child of the project
-            final RexNode condition =  RelOptUtil.pushPastProject(filter.getCondition(), project);
             final RexNode filteredCondition = filter.getCondition().accept(new DrillProjectFilter(project));
 
             RelNode relNode = doOnMatch(call, filter, project, scan, groupScan, filteredCondition);
@@ -136,6 +134,8 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
                 return;
             }
 
+            // convert the filter to one that references the child of the project
+            final RexNode condition =  RelOptUtil.pushPastProject(filter.getCondition(), project);
             call.transformTo(filter.copy(filter.getTraitSet(), relNode, rewriteCondition(scan, condition)));
         }
 
