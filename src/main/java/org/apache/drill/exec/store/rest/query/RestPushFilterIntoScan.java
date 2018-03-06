@@ -49,17 +49,17 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
         super(operand, description);
     }
 
-    void doOnMatch(final RelOptRuleCall call,
-                   final FilterPrel filter,
-                   final ProjectPrel project,
-                   final ScanPrel scan,
-                   final RestGroupScan groupScan,
-                   final RexNode condition) {
+    RelNode doOnMatch(final RelOptRuleCall call,
+                      final FilterPrel filter,
+                      final ProjectPrel project,
+                      final ScanPrel scan,
+                      final RestGroupScan groupScan,
+                      final RexNode condition) {
         final LogicalExpression conditionExp = DrillOptiq.toDrill(new DrillParseContext(PrelUtil.getPlannerSettings(call.getPlanner())), scan, condition);
         final RestFilterBuilder filterBuilder = new RestFilterBuilder(groupScan, conditionExp);
         RestScanSpec newScanSpec = filterBuilder.parseTree();
         if (newScanSpec == null) {
-            return;
+            return null;
         }
 
         final RestGroupScan newGroupsScan =
@@ -67,11 +67,10 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
 
         final RelNode newScanPrel = ScanPrel.create(scan, filter.getTraitSet(), newGroupsScan, scan.getRowType());
         // Depending on whether is a project in the middle, assign either scan or copy of project to childRel.
-        final RelNode childRel = project == null ? newScanPrel : project.copy(project.getTraitSet(), ImmutableList.of(newScanPrel));
-        call.transformTo(filter.copy(filter.getTraitSet(), childRel, rewriteCondition(scan, condition)));
+        return project == null ? newScanPrel : project.copy(project.getTraitSet(), ImmutableList.of(newScanPrel));
     }
 
-    private RexNode rewriteCondition(ScanPrel scan, RexNode condition) {
+    RexNode rewriteCondition(ScanPrel scan, RexNode condition) {
         DrillFilterRewriter shuttle = new DrillFilterRewriter(scan);
         return shuttle.apply(condition);
     }
@@ -94,7 +93,14 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
 
             final RexNode condition = filter.getCondition();
 
-            doOnMatch(call, filter, null, scan, groupScan, condition);
+            RelNode relNode = doOnMatch(call, filter, null, scan, groupScan, condition);
+            if (relNode == null) {
+                //не смогли пробросить
+                return;
+            }
+
+            call.transformTo(filter.copy(filter.getTraitSet(), relNode, rewriteCondition(scan, condition)));
+
         }
 
         @Override
@@ -122,8 +128,15 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
 
             // convert the filter to one that references the child of the project
             final RexNode condition =  RelOptUtil.pushPastProject(filter.getCondition(), project);
+            final RexNode filteredCondition = filter.getCondition().accept(new DrillProjectFilter(project));
 
-            doOnMatch(call, filter, project, scan, groupScan, condition);
+            RelNode relNode = doOnMatch(call, filter, project, scan, groupScan, filteredCondition);
+            if (relNode == null) {
+                //не смогли пробросить
+                return;
+            }
+
+            call.transformTo(filter.copy(filter.getTraitSet(), relNode, rewriteCondition(scan, condition)));
         }
 
         @Override

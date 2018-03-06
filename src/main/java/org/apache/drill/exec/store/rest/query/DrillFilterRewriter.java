@@ -21,6 +21,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.drill.exec.planner.physical.ScanPrel;
 import org.apache.drill.exec.store.rest.RestGroupScan;
@@ -54,7 +55,7 @@ public class DrillFilterRewriter extends RexShuttle {
                         RexBuilder builder = new RexBuilder(new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT));
                         RexLiteral left = builder.makeLiteral("1");
                         RexLiteral right = builder.makeLiteral("1");
-                        return builder.makeCall(call.getOperator(), left, right);
+                        return builder.makeCall(SqlStdOperatorTable.EQUALS, left, right);
                     }
                 }
             }
