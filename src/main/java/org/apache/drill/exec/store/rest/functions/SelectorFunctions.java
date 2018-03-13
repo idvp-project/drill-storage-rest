@@ -40,12 +40,49 @@ public class SelectorFunctions {
             scope = FunctionTemplate.FunctionScope.SIMPLE,
             nulls = FunctionTemplate.NullHandling.INTERNAL,
             isRandom = true)
-    public static class SelectorFunc implements DrillSimpleFunc {
+    public static class NullableSelectorFunc implements DrillSimpleFunc {
         @Param
         VarCharHolder type;
 
         @Param
         NullableVarCharHolder source;
+
+        @Param
+        VarCharHolder selector;
+
+        @Output
+        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+
+        @Inject
+        DrillBuf buffer;
+
+        @Override
+        public void setup() {
+        }
+
+        @Override
+        public void eval() {
+            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
+            listWriter.startList();
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.select(type, source, selector)) {
+                buffer = buffer.reallocIfNeeded(bytes.length);
+                buffer.setBytes(0, bytes);
+                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
+            }
+            listWriter.endList();
+        }
+    }
+
+    @FunctionTemplate(name = "selector",
+            scope = FunctionTemplate.FunctionScope.SIMPLE,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
+            isRandom = true)
+    public static class SelectorFunc implements DrillSimpleFunc {
+        @Param
+        VarCharHolder type;
+
+        @Param
+        VarCharHolder source;
 
         @Param
         VarCharHolder selector;

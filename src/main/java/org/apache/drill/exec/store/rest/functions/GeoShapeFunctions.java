@@ -89,7 +89,7 @@ public class GeoShapeFunctions {
 
         @Override
         public void eval() {
-            String path = org.apache.drill.exec.store.rest.functions.DecodeFunctionsBody.UrlDecodeVarCharFuncBody.eval(jsonPath);
+            String path = org.apache.drill.exec.store.rest.functions.FunctionsHelper.asString(jsonPath);
 
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();

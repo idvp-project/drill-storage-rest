@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
-import io.netty.buffer.DrillBuf;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
@@ -41,6 +40,10 @@ public final class DecodeFunctionsBody {
 
         public static String eval(ValueHolder source) {
             String encoded = FunctionsHelper.asString(source);
+            if (encoded == null) {
+                return null;
+            }
+
             try {
                 return URLDecoder.decode(encoded, StandardCharsets.UTF_8.name());
             } catch (UnsupportedEncodingException e) {
@@ -55,6 +58,10 @@ public final class DecodeFunctionsBody {
 
         public static String eval(ValueHolder source) {
             String encoded = FunctionsHelper.asString(source);
+            if (encoded == null) {
+                return null;
+            }
+
             return StringEscapeUtils.unescapeHtml4(encoded);
         }
     }

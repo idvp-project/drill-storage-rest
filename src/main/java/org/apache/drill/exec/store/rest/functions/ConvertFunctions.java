@@ -63,6 +63,10 @@ public class ConvertFunctions {
         public void eval() {
             String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
             try {
+                if (result == null) {
+                    result = "";
+                }
+
                 jsonReader.setSource(result);
                 jsonReader.write(output);
                 buffer = jsonReader.getWorkBuf();

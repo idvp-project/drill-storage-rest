@@ -79,7 +79,7 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
     @SuppressWarnings("deprecation")
     @Override
     public Set<? extends RelOptRule> getPhysicalOptimizerRules(OptimizerRulesContext optimizerRulesContext) {
-        return ImmutableSet.of(RestPushFilterIntoScan.FILTER_ON_SCAN);
+        return ImmutableSet.of(RestPushFilterIntoScan.FILTER_ON_SCAN, RestPushFilterIntoScan.FILTER_ON_PROJECT);
     }
 
 }

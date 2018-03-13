@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.store.rest.functions;
 
-import com.google.common.base.Charsets;
-import io.netty.buffer.DrillBuf;
 import org.apache.commons.io.IOUtils;
 import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.expr.holders.*;
@@ -31,35 +29,53 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.util.Objects;
 
 /**
  * @author Oleg Zinoviev
  * @since 22.06.2017.
  */
+@SuppressWarnings("WeakerAccess")
 public final class FunctionsHelper {
     private FunctionsHelper() {
     }
 
-    static String asString(ValueHolder source) {
+    @SuppressWarnings("deprecation")
+    public static String asString(ValueHolder source) {
         String result;
         if (source instanceof VarCharHolder) {
             VarCharHolder vch = (VarCharHolder) source;
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVarCharHolder) {
             NullableVarCharHolder vch = (NullableVarCharHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof Var16CharHolder) {
             Var16CharHolder vch = (Var16CharHolder) source;
             result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVar16CharHolder) {
             NullableVar16CharHolder vch = (NullableVar16CharHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF16(vch.start, vch.end, vch.buffer);
         } else if (source instanceof VarBinaryHolder) {
             VarBinaryHolder vch = (VarBinaryHolder) source;
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
         } else if (source instanceof NullableVarBinaryHolder) {
             NullableVarBinaryHolder vch = (NullableVarBinaryHolder) source;
+            if (vch.isSet == 0) {
+                return null;
+            }
+
             result = StringFunctionHelpers.toStringFromUTF8(vch.start, vch.end, vch.buffer);
+        } else if (source instanceof ObjectHolder) {
+            ObjectHolder oh = (ObjectHolder) source;
+            return Objects.toString(oh.obj, null);
         } else {
             throw new RuntimeException("Unsupported type");
         }
