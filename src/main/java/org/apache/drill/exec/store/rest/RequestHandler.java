@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.OperatorContext;
+import org.apache.drill.exec.store.rest.config.HttpMethod;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
 import org.apache.drill.exec.store.rest.helpers.HandlebarsHelper;
 import org.apache.drill.exec.store.rest.query.ParameterValue;
@@ -32,6 +33,7 @@ import org.apache.drill.exec.store.rest.read.RestMetric;
 import org.apache.drill.exec.store.rest.read.RestRecordReader;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -136,10 +138,6 @@ public final class RequestHandler {
         }
 
         URI uri = createURI(config, parameters);
-        String body = null;
-        if (StringUtils.isNotBlank(config.getBody())) {
-            body = HandlebarsHelper.merge(config.getBody(), parameters);
-        }
 
         HttpUriRequest request;
         switch (config.getMethod()) {
@@ -148,11 +146,7 @@ public final class RequestHandler {
                 break;
             }
             case POST: {
-                HttpPost post = new HttpPost(uri);
-                if (body != null) {
-                    post.setEntity(new ByteArrayEntity(body.getBytes(StandardCharsets.UTF_8)));
-                }
-                request = post;
+                request = new HttpPost(uri);
                 break;
             }
             default: {
@@ -165,6 +159,37 @@ public final class RequestHandler {
                 request.addHeader(header.getKey(), null);
             } else {
                 request.addHeader(header.getKey(), HandlebarsHelper.merge(header.getValue(), parameters));
+            }
+        }
+
+        if (config.getMethod() == HttpMethod.POST && request instanceof HttpPost) {
+            HttpPost post = (HttpPost) request;
+
+            String body = null;
+            if (StringUtils.isNotBlank(config.getBody())) {
+                body = HandlebarsHelper.merge(config.getBody(), parameters);
+            }
+
+            if (body != null) {
+
+                ContentType contentType = null;
+                try {
+                    Header contentTypeHeader = request.getFirstHeader(HttpHeaders.CONTENT_TYPE);
+                    if (contentTypeHeader != null) {
+                        contentType = ContentType.parse(contentTypeHeader.getValue());
+                    }
+                } catch (Exception e) {
+                    logger.debug("Unknown content type");
+                }
+
+                Charset charset = StandardCharsets.UTF_8;
+                if (contentType != null && contentType.getCharset() != null) {
+                    charset = contentType.getCharset();
+                }
+
+
+                //Не ставим Content-Type здесь, он будет установлен как заголовок
+                post.setEntity(new ByteArrayEntity(body.getBytes(charset)));
             }
         }
 
@@ -281,7 +306,10 @@ public final class RequestHandler {
                 }
 
                 if (charset == null) {
-                    charset = ContentType.getByMimeType(contentType.getMimeType()).getCharset();
+                    ContentType byMimeType = ContentType.getByMimeType(contentType.getMimeType());
+                    if (byMimeType != null) {
+                        charset = byMimeType.getCharset();
+                    }
                 }
             }
 

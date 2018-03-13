@@ -61,7 +61,7 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
 
         RecordReader reader = new RestRecordReader(context, scan, new RequestHandler(config));
 
-        return new ScanBatch(scan, context, operatorContext, Collections.singleton(reader).iterator(), Collections.emptyList());
+        return new ScanBatch(scan, context, operatorContext, Collections.singletonList(reader), Collections.emptyList());
     }
 
 
