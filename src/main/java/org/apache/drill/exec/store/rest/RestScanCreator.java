@@ -18,8 +18,7 @@
 package org.apache.drill.exec.store.rest;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.ops.OperatorContext;
+import org.apache.drill.exec.ops.ExecutorFragmentContext;
 import org.apache.drill.exec.physical.impl.BatchCreator;
 import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.CloseableRecordBatch;
@@ -39,7 +38,9 @@ import java.util.List;
 public class RestScanCreator implements BatchCreator<RestSubScan> {
 
     @Override
-    public CloseableRecordBatch getBatch(FragmentContext context, RestSubScan scan, List<RecordBatch> children) throws ExecutionSetupException {
+    public CloseableRecordBatch getBatch(ExecutorFragmentContext context,
+                                         RestSubScan scan,
+                                         List<RecordBatch> children) throws ExecutionSetupException {
         assert children == null || children.isEmpty();
         try {
             return createBatchScan(context, scan);
@@ -48,15 +49,13 @@ public class RestScanCreator implements BatchCreator<RestSubScan> {
         }
     }
 
-    private CloseableRecordBatch createBatchScan(FragmentContext context, RestSubScan scan) {
-
-        OperatorContext operatorContext = context.newOperatorContext(scan);
+    private CloseableRecordBatch createBatchScan(ExecutorFragmentContext context, RestSubScan scan) throws ExecutionSetupException {
 
         RuntimeQueryConfig config = scan.getStoragePlugin().getConfig().getRuntimeConfig(scan.getSpec().getQuery());
 
         RecordReader reader = new RestRecordReader(context, scan, new RequestHandler(config));
 
-        return new ScanBatch(scan, context, operatorContext, Collections.singletonList(reader), Collections.emptyList());
+        return new ScanBatch(scan, context, Collections.singletonList(reader));
     }
 
 

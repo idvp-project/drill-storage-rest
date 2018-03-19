@@ -15,7 +15,7 @@
     <parent>
         <groupId>org.apache.drill.contrib</groupId>
         <artifactId>drill-contrib-parent</artifactId>
-        <version>1.12.0</version>
+        <version>1.13.0</version>
     </parent>
 
     <artifactId>drill-storage-rest</artifactId>
@@ -230,6 +230,12 @@
                     <target>1.8</target>
                     <source>1.8</source>
                     <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <skipAssembly>true</skipAssembly>
                 </configuration>
             </plugin>
             <plugin>

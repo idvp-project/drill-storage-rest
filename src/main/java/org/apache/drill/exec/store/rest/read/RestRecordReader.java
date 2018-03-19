@@ -25,7 +25,6 @@ import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ExecConstants;
-import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
@@ -61,6 +60,7 @@ public class RestRecordReader extends AbstractRecordReader {
     private final boolean enableAllTextMode;
     private final boolean readNumbersAsDouble;
     private final boolean unionEnabled;
+    private final boolean enableNanInf;
 
     private JsonProcessor jsonReader;
     private VectorContainerWriter writer;
@@ -80,21 +80,24 @@ public class RestRecordReader extends AbstractRecordReader {
         this.enableAllTextMode = fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_ALL_TEXT_MODE_VALIDATOR);
         this.readNumbersAsDouble = fragmentContext.getOptions().getOption(ExecConstants.JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR);
         this.unionEnabled = fragmentContext.getOptions().getOption(ExecConstants.ENABLE_UNION_TYPE);
+        this.enableNanInf = fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_NAN_INF_NUMBERS_VALIDATOR);
     }
 
 
     @Override
-    public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
+    public void setup(OperatorContext operatorContext, OutputMutator output) {
         this.operatorContext = operatorContext;
         try {
             this.writer = new VectorContainerWriter(output, unionEnabled);
             if (isSkipQuery()) {
-                this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer());
+                this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer(), enableNanInf);
             } else {
-                this.jsonReader = new JsonReader(fragmentContext.getManagedBuffer(),
-                        enableAllTextMode,
-                        true,
-                        readNumbersAsDouble);
+                this.jsonReader = new JsonReader.Builder(fragmentContext.getManagedBuffer())
+                        .allTextMode(enableAllTextMode)
+                        .enableNanInf(enableNanInf)
+                        .readNumbersAsDouble(readNumbersAsDouble)
+                        .skipOuterList(true)
+                        .build();
             }
             setupParser();
         } catch (final Throwable e) {
@@ -102,7 +105,7 @@ public class RestRecordReader extends AbstractRecordReader {
         }
     }
 
-    private void setupParser() throws IOException, URISyntaxException, ExecutionSetupException, SchemaChangeException {
+    private void setupParser() throws IOException, URISyntaxException, ExecutionSetupException {
         RequestHandler.Result result = requestHandler.execute(scan, operatorContext, fragmentContext.getConfig());
 
         JsonNodeFactory factory = JsonNodeFactory.withExactBigDecimals(false);
