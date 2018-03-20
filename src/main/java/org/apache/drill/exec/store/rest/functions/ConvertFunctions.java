@@ -61,6 +61,7 @@ public class ConvertFunctions {
                     .enableNanInf(false)
                     .readNumbersAsDouble(false)
                     .skipOuterList(false)
+                    .defaultSchemaPathColumns()
                     .build();
         }
 

@@ -97,6 +97,7 @@ public class RestRecordReader extends AbstractRecordReader {
                         .enableNanInf(enableNanInf)
                         .readNumbersAsDouble(readNumbersAsDouble)
                         .skipOuterList(true)
+                        .defaultSchemaPathColumns()
                         .build();
             }
             setupParser();
