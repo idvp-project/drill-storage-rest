@@ -24,7 +24,7 @@ import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.annotations.Workspace;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 
 import javax.inject.Inject;
 
@@ -39,14 +39,15 @@ public class ConvertFunctions {
 
     @FunctionTemplate(name = "convert_fromXML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
+            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            isRandom = true)
     public static class ConvertFromXmlFunc implements DrillSimpleFunc {
 
         @Param
         VarCharHolder source;
 
         @Output
-        BaseWriter.ComplexWriter output;
+        ComplexWriter output;
 
         @Workspace
         org.apache.drill.exec.vector.complex.fn.JsonReader jsonReader;
@@ -77,7 +78,7 @@ public class ConvertFunctions {
                 jsonReader.write(output);
                 buffer = jsonReader.getWorkBuf();
             } catch (Exception e) {
-                throw org.apache.drill.common.exceptions.UserException.functionError(e).build();
+                throw new org.apache.drill.common.exceptions.DrillRuntimeException("Error while converting from Xml. ", e);
             }
         }
     }
