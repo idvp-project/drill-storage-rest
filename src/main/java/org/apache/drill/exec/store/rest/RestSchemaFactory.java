@@ -25,8 +25,9 @@ import org.apache.drill.exec.store.SchemaConfig;
 import org.apache.drill.exec.store.SchemaFactory;
 import org.apache.drill.exec.store.StoragePlugin;
 
-import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * @author Oleg Zinoviev
@@ -43,12 +44,14 @@ public class RestSchemaFactory implements SchemaFactory {
     }
 
     @Override
-    public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus parent) throws IOException {
+    public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus parent) {
         RestSchema schema = new RestSchema(schemaName);
         parent.add(schemaName, schema);
     }
 
     class RestSchema extends AbstractSchema {
+
+        private final ConcurrentMap<String, RestTable> tables = new ConcurrentSkipListMap<>(String::compareToIgnoreCase);
 
         RestSchema(String name) {
             super(Collections.emptyList(), name);
@@ -61,7 +64,8 @@ public class RestSchemaFactory implements SchemaFactory {
 
         @Override
         public Table getTable(String name) {
-            return new RestTable(plugin, schemaName, new RestScanSpec(name, null));
+            return tables.computeIfAbsent(name,
+                    n -> new RestTable(plugin, schemaName, new RestScanSpec(name, null)));
         }
     }
 
