@@ -48,7 +48,8 @@ public final class HandlebarsHelper {
                 .push(ValueResolver.VALUE_RESOLVERS)
                 .build();
 
-        Handlebars handlebars = new Handlebars()
+        Handlebars handlebars = new FixHandlebars()
+                .with(new CollectionFormatter())
                 .infiniteLoops(false);
         try {
             return handlebars.compileInline(input).apply(context);
