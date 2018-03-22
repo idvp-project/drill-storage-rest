@@ -17,12 +17,17 @@
  */
 package org.apache.drill.exec.store.rest.helpers;
 
+import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
+import com.github.jknack.handlebars.ValueResolver;
+import com.github.jknack.handlebars.context.MapValueResolver;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Oleg Zinoviev
@@ -38,13 +43,41 @@ public final class HandlebarsHelper {
         Preconditions.checkNotNull(input, "input");
         Preconditions.checkNotNull(parameters, "parameters");
 
-        Handlebars handlebars = new Handlebars().infiniteLoops(false);
+        Context context = Context.newBuilder(parameters)
+                .push(new CustomMapValueResolver())
+                .push(ValueResolver.VALUE_RESOLVERS)
+                .build();
+
+        Handlebars handlebars = new Handlebars()
+                .infiniteLoops(false);
         try {
-            return handlebars.compileInline(input).apply(parameters);
+            return handlebars.compileInline(input).apply(context);
         } catch (IOException e) {
             throw new DrillRuntimeException(e);
         }
 
+    }
+
+    private static class CustomMapValueResolver implements ValueResolver {
+
+        @Override
+        public Object resolve(Object context, String name) {
+            Object resolve = MapValueResolver.INSTANCE.resolve(context, name);
+            if (resolve == UNRESOLVED) {
+                resolve = MapValueResolver.INSTANCE.resolve(context, StringUtils.lowerCase(name));
+            }
+            return resolve;
+        }
+
+        @Override
+        public Object resolve(Object context) {
+            return MapValueResolver.INSTANCE.resolve(context);
+        }
+
+        @Override
+        public Set<Map.Entry<String, Object>> propertySet(Object context) {
+            return MapValueResolver.INSTANCE.propertySet(context);
+        }
     }
 
 }

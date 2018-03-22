@@ -128,7 +128,6 @@ public final class RequestHandler {
         }
 
         Map<String, Object> parameters = new HashMap<>();
-
         for (Map.Entry<String, ParameterValue> entry : parameterValues.entrySet()) {
             if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.QUERY) {
                 String sql = Objects.toString(entry.getValue().getValue(), null);
@@ -140,6 +139,10 @@ public final class RequestHandler {
                 parameters.put(entry.getKey(), entry.getValue() == null ? null : entry.getValue().getValue());
             }
         }
+
+        // Так как при передаче параметров с помощью SUBQUERY у нас могут быть названия параметров в неправильном регистре,
+        // то копируем значения для key.lowerCase() и модифицируем resolver в handlebars
+        parameters = addParametersLowerCase(parameters);
 
         URI uri = createURI(config, parameters);
 
@@ -198,6 +201,17 @@ public final class RequestHandler {
         }
 
         return request;
+    }
+
+    private Map<String, Object> addParametersLowerCase(Map<String, Object> parameters) {
+        Map<String, Object> result = new HashMap<>(parameters);
+
+        for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+            result.put(entry.getKey(), entry.getValue());
+            result.putIfAbsent(StringUtils.lowerCase(entry.getKey()), entry.getValue());
+        }
+
+        return result;
     }
 
     private Object executeSingleColumnQuery(String sql, DrillConfig drillConfig) throws SQLException {
