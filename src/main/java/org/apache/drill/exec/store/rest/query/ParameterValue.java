@@ -50,7 +50,8 @@ public final class ParameterValue {
 
     public enum Type {
         QUERY("query"),
-        VALUE("value");
+        SUBQUERY("subquery"),
+        @SuppressWarnings("unused") VALUE("value");
 
         private final String value;
 

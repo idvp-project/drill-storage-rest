@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.rest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMultimap;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.config.DrillConfig;
@@ -131,7 +132,10 @@ public final class RequestHandler {
         for (Map.Entry<String, ParameterValue> entry : parameterValues.entrySet()) {
             if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.QUERY) {
                 String sql = Objects.toString(entry.getValue().getValue(), null);
-                parameters.put(entry.getKey(), executeSubQuery(sql, drillConfig));
+                parameters.put(entry.getKey(), executeSingleColumnQuery(sql, drillConfig));
+            } if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.SUBQUERY) {
+                String sql = Objects.toString(entry.getValue().getValue(), null);
+                parameters.putAll(executeSubQuery(sql, drillConfig).asMap());
             } else {
                 parameters.put(entry.getKey(), entry.getValue() == null ? null : entry.getValue().getValue());
             }
@@ -196,7 +200,7 @@ public final class RequestHandler {
         return request;
     }
 
-    private Object executeSubQuery(String sql, DrillConfig drillConfig) throws SQLException {
+    private Object executeSingleColumnQuery(String sql, DrillConfig drillConfig) throws SQLException {
         Preconditions.checkNotNull(sql, "Subquery sql is null");
 
         List<Object> result = new ArrayList<>();
@@ -218,6 +222,38 @@ public final class RequestHandler {
         }
 
         return Collections.unmodifiableList(result);
+    }
+
+    private ImmutableMultimap<String, Object> executeSubQuery(String sql, DrillConfig drillConfig) throws SQLException {
+        Preconditions.checkNotNull(sql, "Subquery sql is null");
+
+        ImmutableMultimap.Builder<String, Object> result = new ImmutableMultimap.Builder<>();
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+
+        int port = drillConfig.getInt("drill.exec.rpc.user.server.port");
+
+        try (Connection connection = DriverManager.getConnection("jdbc:drill:drillbit=127.0.0.1:" + port)) {
+            try (Statement statement = connection.createStatement()) {
+                try (ResultSet resultSet = statement.executeQuery(sql)) {
+                    ResultSetMetaData metaData = resultSet.getMetaData();
+                    List<String> columns = new ArrayList<>(metaData.getColumnCount());
+                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                        columns.add(metaData.getColumnName(i));
+                    }
+
+                    while (resultSet.next()) {
+                        for (String column : columns) {
+                            result.put(column, resultSet.getObject(column));
+                        }
+                    }
+                }
+            }
+        } finally {
+            subqueryTime += stopwatch.stop().elapsed(TimeUnit.MILLISECONDS);
+        }
+
+        return result.build();
     }
 
 
