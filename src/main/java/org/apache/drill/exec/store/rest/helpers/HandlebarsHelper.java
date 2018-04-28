@@ -21,6 +21,7 @@ import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.ValueResolver;
 import com.github.jknack.handlebars.context.MapValueResolver;
+import com.github.jknack.handlebars.helper.StringHelpers;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
@@ -51,6 +52,9 @@ public final class HandlebarsHelper {
         Handlebars handlebars = new FixHandlebars()
                 .with(new CollectionFormatter())
                 .infiniteLoops(false);
+        EncodeHelpers.register(handlebars);
+        StringHelpers.register(handlebars);
+
         try {
             return handlebars.compileInline(input).apply(context);
         } catch (IOException e) {
