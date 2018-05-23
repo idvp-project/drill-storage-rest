@@ -22,9 +22,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMultimap;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.store.rest.config.HttpMethod;
 import org.apache.drill.exec.store.rest.config.RuntimeQueryConfig;
@@ -35,11 +37,10 @@ import org.apache.drill.exec.store.rest.read.RestRecordReader;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
+import org.apache.http.HttpRequest;
+import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.AbstractResponseHandler;
@@ -53,6 +54,7 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -103,6 +105,17 @@ public final class RequestHandler {
                 }
 
                 return new Result(contentType, body, headers);
+            } catch (HttpResponseException e) {
+                UserException.Builder builder = UserException.dataReadError(e)
+                        .addContext("url", request.getURI().toString())
+                        .addContext("method", request.getMethod())
+                        .addContext("headers", ArrayUtils.toString(request.getAllHeaders()));
+                if (request instanceof HttpEntityEnclosingRequestBase) {
+                    HttpEntity entity = ((HttpEntityEnclosingRequestBase) request).getEntity();
+                    builder.addContext("body", entity.toString());
+                }
+
+                throw builder.build(logger);
             }
 
         } catch (SQLException e) {
@@ -124,7 +137,8 @@ public final class RequestHandler {
         Map<String, ParameterValue> parameterValues = Collections.emptyMap();
         if (StringUtils.isNotBlank(spec.getParameters())) {
             parameterValues = RestRecordReader.MAPPER.readValue(spec.getParameters(),
-                    new TypeReference<Map<String, ParameterValue>>() {});
+                    new TypeReference<Map<String, ParameterValue>>() {
+                    });
         }
 
         Map<String, Object> parameters = new HashMap<>();
@@ -196,7 +210,7 @@ public final class RequestHandler {
 
 
                 //Не ставим Content-Type здесь, он будет установлен как заголовок
-                post.setEntity(new ByteArrayEntity(body.getBytes(charset)));
+                post.setEntity(new ExtendedByteArrayEntity(body.getBytes(charset), body));
             }
         }
 
@@ -369,6 +383,20 @@ public final class RequestHandler {
 
             return new String(content, charset);
         }
+    }
 
+    private final static class ExtendedByteArrayEntity extends ByteArrayEntity {
+
+        private final String str;
+
+        public ExtendedByteArrayEntity(byte[] bytes, String str) {
+            super(bytes);
+            this.str = str;
+        }
+
+        @Override
+        public String toString() {
+            return str;
+        }
     }
 }
