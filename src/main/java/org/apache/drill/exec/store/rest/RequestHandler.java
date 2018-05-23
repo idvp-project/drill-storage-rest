@@ -132,7 +132,7 @@ public final class RequestHandler {
             if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.QUERY) {
                 String sql = Objects.toString(entry.getValue().getValue(), null);
                 parameters.put(entry.getKey(), executeSingleColumnQuery(sql, drillConfig));
-            } if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.SUBQUERY) {
+            } else if (entry.getValue() != null && entry.getValue().getType() == ParameterValue.Type.SUBQUERY) {
                 String sql = Objects.toString(entry.getValue().getValue(), null);
                 parameters.putAll(executeSubQuery(sql, drillConfig).asMap());
             } else {
