@@ -72,7 +72,7 @@ public final class GeoShapeFunctionsBody {
 
                     return geoJsonObject.accept(geoJsonVisitor);
                 } catch (IOException e) {
-                    throw UserException.functionError(e).message("JsonPathSelectorFuncBody").build(logger);
+                    throw UserException.functionError(e).message("GeoShapeFunctionsBody").build(logger);
                 }
             }
         };
