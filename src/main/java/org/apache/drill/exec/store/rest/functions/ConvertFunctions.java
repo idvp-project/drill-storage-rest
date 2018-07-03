@@ -83,4 +83,45 @@ public class ConvertFunctions {
         }
     }
 
+    @FunctionTemplate(name = "xml_to_json",
+            scope = FunctionTemplate.FunctionScope.SIMPLE,
+            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            isRandom = true)
+    public static class XmlToJson implements DrillSimpleFunc {
+        @Param
+        VarCharHolder source;
+
+        @Output
+        VarCharHolder output;
+
+        @Inject
+        DrillBuf buffer;
+
+        @Override
+        public void setup() {
+        }
+
+        @Override
+        public void eval() {
+            String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
+            try {
+                if (result == null) {
+                    result = "";
+                }
+
+                byte[] bytes = result.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                output.buffer = buffer = buffer.reallocIfNeeded(bytes.length);
+                output.start = 0;
+                output.end = bytes.length;
+
+                for (int id = 0; id < bytes.length; ++id) {
+                    byte currentByte = bytes[id];
+                    output.buffer.setByte(id, currentByte);
+                }
+            } catch (Exception e) {
+                throw new org.apache.drill.common.exceptions.DrillRuntimeException("Error while converting from Xml. ", e);
+            }
+        }
+    }
+
 }
