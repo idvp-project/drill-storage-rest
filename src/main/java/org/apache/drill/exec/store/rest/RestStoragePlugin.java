@@ -42,17 +42,13 @@ import java.util.Set;
 @SuppressWarnings("FieldCanBeLocal")
 public class RestStoragePlugin extends AbstractStoragePlugin {
 
-    @SuppressWarnings("unused")
-    private final DrillbitContext context;
     private final RestSchemaFactory schemaFactory;
     private final RestStoragePluginConfig config;
-    private final String name;
 
     public RestStoragePlugin(RestStoragePluginConfig config, DrillbitContext context, String name) {
-        this.context = context;
+        super(context, name);
         this.schemaFactory = new RestSchemaFactory(name, this);
         this.config = config;
-        this.name = name;
     }
 
     @Override
@@ -61,11 +57,11 @@ public class RestStoragePlugin extends AbstractStoragePlugin {
     }
 
     public String getRequestParameters() {
-        return String.format("$__%s_param", name);
+        return String.format("$__%s_param", getName());
     }
 
     @Override
-    public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus schemaPlus) throws IOException {
+    public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus schemaPlus) {
         schemaFactory.registerSchemas(schemaConfig, schemaPlus);
     }
 
