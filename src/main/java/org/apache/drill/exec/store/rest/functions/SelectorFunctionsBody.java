@@ -19,7 +19,7 @@ package org.apache.drill.exec.store.rest.functions;
 
 import com.bazaarvoice.jolt.Chainr;
 import com.bazaarvoice.jolt.chainr.instantiator.DefaultChainrInstantiator;
-import com.google.common.base.Charsets;
+import org.apache.drill.shaded.guava.com.google.common.base.Charsets;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import org.apache.commons.lang3.StringUtils;

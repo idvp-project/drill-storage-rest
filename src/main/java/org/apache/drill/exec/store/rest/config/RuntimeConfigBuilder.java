@@ -17,7 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.config;
 
-import com.google.common.base.Preconditions;
+import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.exec.store.rest.RestStoragePluginConfig;
 

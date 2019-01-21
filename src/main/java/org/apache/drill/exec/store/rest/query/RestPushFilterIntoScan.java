@@ -17,7 +17,7 @@
  */
 package org.apache.drill.exec.store.rest.query;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.drill.shaded.guava.com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
@@ -65,7 +65,7 @@ public abstract class RestPushFilterIntoScan extends StoragePluginOptimizerRule 
         final RestGroupScan newGroupsScan =
                 new RestGroupScan(groupScan.getUserName(), groupScan.getStoragePlugin(), newScanSpec, groupScan.getColumns(), true);
 
-        final RelNode newScanPrel = ScanPrel.create(scan, filter.getTraitSet(), newGroupsScan, scan.getRowType());
+        final RelNode newScanPrel = new ScanPrel(scan.getCluster(), filter.getTraitSet(), newGroupsScan, scan.getRowType(), scan.getTable());
         // Depending on whether is a project in the middle, assign either scan or copy of project to childRel.
         return project == null ? newScanPrel : project.copy(project.getTraitSet(), ImmutableList.of(newScanPrel));
     }

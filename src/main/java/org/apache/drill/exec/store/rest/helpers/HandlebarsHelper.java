@@ -22,7 +22,7 @@ import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.ValueResolver;
 import com.github.jknack.handlebars.context.MapValueResolver;
 import com.github.jknack.handlebars.helper.StringHelpers;
-import com.google.common.base.Preconditions;
+import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 
