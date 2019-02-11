@@ -73,7 +73,7 @@ public class ConvertFunctions {
             String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
             try {
                 if (result == null) {
-                    BaseWriter.MapWriter mapWriter = output.rootAsMap();
+                    org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter mapWriter = output.rootAsMap();
                     mapWriter.start();
                     mapWriter.end();
                 } else {
@@ -121,7 +121,7 @@ public class ConvertFunctions {
             String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
             try {
                 if (result == null) {
-                    BaseWriter.MapWriter mapWriter = output.rootAsMap();
+                    org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter mapWriter = output.rootAsMap();
                     mapWriter.start();
                     mapWriter.end();
                 } else {
