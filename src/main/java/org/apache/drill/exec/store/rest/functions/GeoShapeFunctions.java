@@ -22,6 +22,7 @@ import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
@@ -30,14 +31,45 @@ import javax.inject.Inject;
  * @author Oleg Zinoviev
  * @since 30.10.17
  **/
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "Duplicates"})
 public class GeoShapeFunctions {
     private GeoShapeFunctions() {
     }
 
     @FunctionTemplate(name = "geoShape",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
+            isRandom = true)
+    public static class NullableGeoShape1Func implements DrillSimpleFunc {
+        @Param
+        NullableVarCharHolder source;
+
+        @Output
+        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+
+        @Inject
+        DrillBuf buffer;
+
+        @Override
+        public void setup() {
+        }
+
+        @Override
+        public void eval() {
+            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
+            listWriter.startList();
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.GeoShapeFunctionsBody.convert(source, "$..geometry")) {
+                buffer = buffer.reallocIfNeeded(bytes.length);
+                buffer.setBytes(0, bytes);
+                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
+            }
+            listWriter.endList();
+        }
+    }
+
+    @FunctionTemplate(name = "geoShape",
+            scope = FunctionTemplate.FunctionScope.SIMPLE,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
             isRandom = true)
     public static class GeoShape1Func implements DrillSimpleFunc {
         @Param
@@ -68,7 +100,43 @@ public class GeoShapeFunctions {
 
     @FunctionTemplate(name = "geoShape",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
+            isRandom = true)
+    public static class NullableGeoShape2Func implements DrillSimpleFunc {
+        @Param
+        NullableVarCharHolder source;
+
+        @Param
+        VarCharHolder jsonPath;
+
+        @Output
+        org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter output;
+
+        @Inject
+        DrillBuf buffer;
+
+        @Override
+        public void setup() {
+        }
+
+        @Override
+        public void eval() {
+            String path = org.apache.drill.exec.store.rest.functions.FunctionsHelper.asString(jsonPath);
+
+            org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
+            listWriter.startList();
+            for (byte[] bytes : org.apache.drill.exec.store.rest.functions.GeoShapeFunctionsBody.convert(source, path)) {
+                buffer = buffer.reallocIfNeeded(bytes.length);
+                buffer.setBytes(0, bytes);
+                listWriter.varChar().writeVarChar(0, bytes.length, buffer);
+            }
+            listWriter.endList();
+        }
+    }
+
+    @FunctionTemplate(name = "geoShape",
+            scope = FunctionTemplate.FunctionScope.SIMPLE,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
             isRandom = true)
     public static class GeoShape2Func implements DrillSimpleFunc {
         @Param

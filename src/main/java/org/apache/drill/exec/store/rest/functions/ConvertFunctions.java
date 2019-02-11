@@ -23,7 +23,9 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.annotations.Workspace;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 
 import javax.inject.Inject;
@@ -32,14 +34,62 @@ import javax.inject.Inject;
  * @author Oleg Zinoviev
  * @since 22.06.2017.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "Duplicates"})
 public class ConvertFunctions {
     private ConvertFunctions() {
     }
 
     @FunctionTemplate(name = "convert_fromXML",
             scope = FunctionTemplate.FunctionScope.SIMPLE,
-            nulls = FunctionTemplate.NullHandling.NULL_IF_NULL,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
+            isRandom = true)
+    public static class NullableConvertFromXml implements DrillSimpleFunc {
+
+        @Param
+        NullableVarCharHolder source;
+
+        @Output
+        ComplexWriter output;
+
+        @Workspace
+        org.apache.drill.exec.vector.complex.fn.JsonReader jsonReader;
+
+        @Inject
+        DrillBuf buffer;
+
+        @Override
+        public void setup() {
+            jsonReader = new org.apache.drill.exec.vector.complex.fn.JsonReader.Builder(buffer)
+                    .allTextMode(false)
+                    .enableNanInf(false)
+                    .readNumbersAsDouble(false)
+                    .skipOuterList(false)
+                    .defaultSchemaPathColumns()
+                    .build();
+        }
+
+        @Override
+        public void eval() {
+            String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
+            try {
+                if (result == null) {
+                    BaseWriter.MapWriter mapWriter = output.rootAsMap();
+                    mapWriter.start();
+                    mapWriter.end();
+                } else {
+                    jsonReader.setSource(result);
+                    jsonReader.write(output);
+                    buffer = jsonReader.getWorkBuf();
+                }
+            } catch (Exception e) {
+                throw new org.apache.drill.common.exceptions.DrillRuntimeException("Error while converting from Xml. ", e);
+            }
+        }
+    }
+
+    @FunctionTemplate(name = "convert_fromXML",
+            scope = FunctionTemplate.FunctionScope.SIMPLE,
+            nulls = FunctionTemplate.NullHandling.INTERNAL,
             isRandom = true)
     public static class ConvertFromXmlFunc implements DrillSimpleFunc {
 
@@ -71,12 +121,14 @@ public class ConvertFunctions {
             String result = org.apache.drill.exec.store.rest.functions.ConvertFunctionsBody.ConvertFromXmlFuncBody.eval(source);
             try {
                 if (result == null) {
-                    result = "";
+                    BaseWriter.MapWriter mapWriter = output.rootAsMap();
+                    mapWriter.start();
+                    mapWriter.end();
+                } else {
+                    jsonReader.setSource(result);
+                    jsonReader.write(output);
+                    buffer = jsonReader.getWorkBuf();
                 }
-
-                jsonReader.setSource(result);
-                jsonReader.write(output);
-                buffer = jsonReader.getWorkBuf();
             } catch (Exception e) {
                 throw new org.apache.drill.common.exceptions.DrillRuntimeException("Error while converting from Xml. ", e);
             }
