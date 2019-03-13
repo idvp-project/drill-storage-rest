@@ -31,7 +31,7 @@ import javax.inject.Inject;
  * @author Oleg Zinoviev
  * @since 21.06.2017.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "Duplicates"})
 public class SelectorFunctions {
     private SelectorFunctions() {
     }
@@ -64,6 +64,7 @@ public class SelectorFunctions {
         public void eval() {
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
+            listWriter.varChar();
             for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.select(type, source, selector)) {
                 buffer = buffer.reallocIfNeeded(bytes.length);
                 buffer.setBytes(0, bytes);
@@ -101,6 +102,7 @@ public class SelectorFunctions {
         public void eval() {
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
+            listWriter.varChar();
             for (byte[] bytes : org.apache.drill.exec.store.rest.functions.SelectorFunctionsBody.select(type, source, selector)) {
                 buffer = buffer.reallocIfNeeded(bytes.length);
                 buffer.setBytes(0, bytes);

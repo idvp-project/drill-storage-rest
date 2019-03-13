@@ -57,6 +57,7 @@ public class GeoShapeFunctions {
         public void eval() {
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
+            listWriter.varChar();
             for (byte[] bytes : org.apache.drill.exec.store.rest.functions.GeoShapeFunctionsBody.convert(source, "$..geometry")) {
                 buffer = buffer.reallocIfNeeded(bytes.length);
                 buffer.setBytes(0, bytes);
@@ -93,6 +94,7 @@ public class GeoShapeFunctions {
 
             org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter listWriter = output.rootAsList();
             listWriter.startList();
+            listWriter.varChar();
             for (byte[] bytes : org.apache.drill.exec.store.rest.functions.GeoShapeFunctionsBody.convert(source, path)) {
                 buffer = buffer.reallocIfNeeded(bytes.length);
                 buffer.setBytes(0, bytes);
