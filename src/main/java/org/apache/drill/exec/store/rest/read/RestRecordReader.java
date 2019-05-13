@@ -61,6 +61,7 @@ public class RestRecordReader extends AbstractRecordReader {
     private final boolean readNumbersAsDouble;
     private final boolean unionEnabled;
     private final boolean enableNanInf;
+    private final boolean enableEscapeAnyChar;
 
     private JsonProcessor jsonReader;
     private VectorContainerWriter writer;
@@ -81,6 +82,7 @@ public class RestRecordReader extends AbstractRecordReader {
         this.readNumbersAsDouble = fragmentContext.getOptions().getOption(ExecConstants.JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR);
         this.unionEnabled = fragmentContext.getOptions().getOption(ExecConstants.ENABLE_UNION_TYPE);
         this.enableNanInf = fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_NAN_INF_NUMBERS_VALIDATOR);
+        this.enableEscapeAnyChar = fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_ESCAPE_ANY_CHAR_VALIDATOR);
     }
 
 
@@ -90,11 +92,12 @@ public class RestRecordReader extends AbstractRecordReader {
         try {
             this.writer = new VectorContainerWriter(output, unionEnabled);
             if (isSkipQuery()) {
-                this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer(), enableNanInf);
+                this.jsonReader = new CountingJsonReader(fragmentContext.getManagedBuffer(), enableNanInf, enableEscapeAnyChar);
             } else {
                 this.jsonReader = new JsonReader.Builder(fragmentContext.getManagedBuffer())
                         .allTextMode(enableAllTextMode)
                         .enableNanInf(enableNanInf)
+                        .enableEscapeAnyChar(enableEscapeAnyChar)
                         .readNumbersAsDouble(readNumbersAsDouble)
                         .skipOuterList(true)
                         .defaultSchemaPathColumns()
