@@ -18,7 +18,7 @@
 package org.apache.drill.exec.store.rest.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.drill.shaded.guava.com.google.common.base.Preconditions;
 
 import java.util.Collections;
 import java.util.Map;

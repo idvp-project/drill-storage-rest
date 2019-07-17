@@ -19,14 +19,14 @@ package org.apache.drill.exec.store.rest.functions;
 
 import com.bazaarvoice.jolt.Chainr;
 import com.bazaarvoice.jolt.chainr.instantiator.DefaultChainrInstantiator;
-import com.google.common.base.Charsets;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.drill.shaded.guava.com.google.common.base.Charsets;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
