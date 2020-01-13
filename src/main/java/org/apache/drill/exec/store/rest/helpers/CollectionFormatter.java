@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,10 +18,13 @@
 package org.apache.drill.exec.store.rest.helpers;
 
 import com.github.jknack.handlebars.Formatter;
-import org.apache.commons.collections.IteratorUtils;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.StringJoiner;
 
 /**
  * @author Oleg Zinoviev
@@ -45,8 +48,10 @@ public class CollectionFormatter implements Formatter {
         } else if (value instanceof Collection<?>) {
             result = new ArrayList<>((Collection<?>) value);
         } else if (value instanceof Iterable<?>) {
-            //noinspection unchecked
-            result = new ArrayList<>(IteratorUtils.toList(((Iterable<?>) value).iterator()));
+            result = new ArrayList<>();
+            for (Object v : (Iterable<?>) value) {
+                result.add(v);
+            }
         }
 
         if (result == null) {

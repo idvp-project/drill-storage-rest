@@ -21,11 +21,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.geojson.*;
+import org.geojson.Feature;
+import org.geojson.FeatureCollection;
+import org.geojson.GeoJsonObject;
+import org.geojson.GeoJsonObjectVisitor;
+import org.geojson.GeometryCollection;
+import org.geojson.LineString;
+import org.geojson.LngLatAlt;
+import org.geojson.MultiLineString;
+import org.geojson.MultiPoint;
+import org.geojson.MultiPolygon;
+import org.geojson.Point;
+import org.geojson.Polygon;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -114,14 +124,13 @@ public final class GeoShapeFunctionsBody {
         }
 
 
-
         @Override
         public byte[] visit(MultiPolygon multiPolygon) {
             JsonNodeFactory jsonNodeFactory = JsonNodeFactory.withExactBigDecimals(false);
             ArrayNode rootNode = jsonNodeFactory.arrayNode();
 
             for (List<List<LngLatAlt>> coordinates : multiPolygon.getCoordinates()) {
-                if (CollectionUtils.isEmpty(coordinates)) {
+                if (coordinates == null || coordinates.isEmpty()) {
                     continue;
                 }
 
