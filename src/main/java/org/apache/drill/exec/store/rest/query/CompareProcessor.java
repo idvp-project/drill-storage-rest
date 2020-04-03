@@ -40,7 +40,7 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
             .add(ValueExpressions.QuotedString.class)
             .build();
 
-    static boolean isCompareFunction(String function) {
+    static boolean isCompareFunction(final String function) {
         return COMPARE_FUNCTIONS.contains(function);
     }
 
@@ -86,7 +86,8 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
     }
 
     @Override
-    public Boolean visitSchemaPath(SchemaPath path, LogicalExpression valueArg) throws RuntimeException {
+    public Boolean visitSchemaPath(final SchemaPath path,
+                                   final LogicalExpression valueArg) throws RuntimeException {
         if (!VALUE_EXPRESSION_CLASSES.contains(valueArg.getClass())) {
             return false;
         }
@@ -95,4 +96,9 @@ class CompareProcessor extends AbstractExprVisitor<Boolean, LogicalExpression, R
         return success && valueArg.accept(this, valueArg);
     }
 
+    @Override
+    public Boolean visitUnknown(final LogicalExpression e,
+                                final LogicalExpression value) throws RuntimeException {
+        return false;
+    }
 }

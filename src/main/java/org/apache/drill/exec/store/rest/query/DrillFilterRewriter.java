@@ -34,13 +34,13 @@ public class DrillFilterRewriter extends RexShuttle {
     private final ScanPrel scan;
     private final RestGroupScan groupScan;
 
-    DrillFilterRewriter(ScanPrel scan) {
+    DrillFilterRewriter(final ScanPrel scan) {
         this.scan = scan;
         this.groupScan = (RestGroupScan) scan.getGroupScan();
     }
 
     @Override
-    public RexNode visitCall(RexCall call) {
+    public RexNode visitCall(final RexCall call) {
         if (call.getOperator().getKind() == SqlKind.EQUALS) {
 
             for (RexNode node : call.getOperands()) {
